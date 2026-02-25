@@ -5,5 +5,6 @@ import lombok.Getter;
 @Getter
 public enum EstadoUsuario {
     ACTIVO,
-    INACTIVO
+    INACTIVO,
+    BLOQUEADO
 }

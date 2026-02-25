@@ -29,7 +29,7 @@ import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
-public class securityConfig {
+public class SecurityConfig {
 
     private final JwtTokenValidatorFilter jwtTokenValidatorFilter;
     private final UserDetailsService userDetailsService;
@@ -37,7 +37,7 @@ public class securityConfig {
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
 
 
-    public securityConfig(JwtTokenValidatorFilter jwtTokenValidatorFilter, UserDetailsService userDetailsService, AccessDeniedHandler accessDeniedHandler, CustomAuthenticationEntryPoint authenticationEntryPoint) {
+    public SecurityConfig(JwtTokenValidatorFilter jwtTokenValidatorFilter, UserDetailsService userDetailsService, AccessDeniedHandler accessDeniedHandler, CustomAuthenticationEntryPoint authenticationEntryPoint) {
         this.jwtTokenValidatorFilter = jwtTokenValidatorFilter;
         this.userDetailsService = userDetailsService;
 

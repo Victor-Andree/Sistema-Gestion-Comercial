@@ -5,8 +5,10 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Entity
-@Table(name = "TiposProductos")
+@Table(name = "tipo_producto")
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -18,4 +20,8 @@ public class TipoProductoEntity {
 
     @Column(unique = true, nullable = false)
     private String nombre;
+
+    @OneToMany(mappedBy = "tipoProducto")
+    private List<ProductoEntity> productos;
+
 }

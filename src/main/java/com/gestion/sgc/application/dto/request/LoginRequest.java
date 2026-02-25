@@ -1,7 +1,13 @@
 package com.gestion.sgc.application.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class LoginRequest {
 
     @NotBlank(message = "el username no puede estar vacio")
@@ -10,24 +16,5 @@ public class LoginRequest {
     @NotBlank(message ="ingrasa una contraseña valida")
     private String password;
 
-    public LoginRequest(String username, String password) {
-        this.username = username;
-        this.password = password;
-    }
 
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
 }

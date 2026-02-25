@@ -1,6 +1,5 @@
 package com.gestion.sgc.domain.aggregates.model;
 
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,13 +7,9 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class Persona {
+public class TipoProducto {
 
-    private Long personaId;
+    private Long tipoProductoId;
     private String nombre;
-    private String apellidos;
-    private String dni;
-    private String correo;
-    private String telefono;
 
 }

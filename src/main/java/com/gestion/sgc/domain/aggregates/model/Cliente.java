@@ -1,6 +1,5 @@
 package com.gestion.sgc.domain.aggregates.model;
 
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,14 +9,10 @@ import java.time.LocalDateTime;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class Usuario {
+public class Cliente {
 
-    private Long usuarioId;
+    private Long clienteId;
     private Persona persona;
-    private String username;
-    private String password;
-    private String estadoUsuario;
-    private String rol;
     private LocalDateTime fechaRegistro;
 
 }

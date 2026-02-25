@@ -1,4 +1,5 @@
-package com.gestion.sgc.domain.aggregates.model;
+package com.gestion.sgc.application.dto.request;
+
 
 import com.gestion.sgc.domain.aggregates.constans.EstadoProducto;
 import lombok.AllArgsConstructor;
@@ -8,14 +9,13 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class Producto {
+public class ProductoRequest {
 
-    private Long productoId;
     private String nombre;
     private String descripcion;
     private Double precioVenta;
     private int stockMinimo;
     private EstadoProducto estadoProducto;
-    private TipoProducto tipoProducto;
+    private Long tipoProductoId;
 
 }

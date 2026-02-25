@@ -1,5 +1,6 @@
 package com.gestion.sgc.infraestructure.entity;
 
+import com.gestion.sgc.domain.aggregates.constans.EstadoProducto;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -17,19 +18,19 @@ public class PersonaEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long personaId;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false)
     private String nombre;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false)
     private String apellidos;
 
-    @Column(unique = true, nullable = false)
+    @Column(name = "dni", nullable = false)
     private String dni;
 
-    @Column(unique = true, nullable = false)
+    @Column(name = "correo", nullable = false)
     private String correo;
 
-    @Column(unique = true, nullable = false)
+    @Column(name = "telefono", nullable = false)
     private String telefono;
 
 

@@ -7,6 +7,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,6 +23,7 @@ import java.util.Objects;
 
 
 @Component
+@Slf4j
 public class JwtTokenValidatorFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
@@ -80,6 +82,15 @@ public class JwtTokenValidatorFilter extends OncePerRequestFilter {
 
         filterChain.doFilter(request, response);
 
+    }
+
+    //evitar filtrar ciertos enodpoints
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.startsWith("/api/v1/authentication/") ||
+                path.startsWith("/swagger-ui") ||
+                path.startsWith("/v3/api-docs");
     }
 
 }

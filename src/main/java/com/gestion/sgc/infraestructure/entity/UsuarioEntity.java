@@ -14,12 +14,11 @@ import java.time.LocalDateTime;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-
 public class UsuarioEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long userId;
+    private Long usuarioId;
 
     @Column(unique = true, nullable = false)
     private String username;
@@ -34,5 +33,9 @@ public class UsuarioEntity {
 
     @Enumerated(EnumType.STRING)
     private RolEnum rol;
+
+    @OneToOne
+    @JoinColumn(name = "persona_id", nullable = false, unique = true)
+    private PersonaEntity persona;
 
 }
