@@ -56,9 +56,16 @@ public class SecurityConfig {
         httpSecurity.authorizeHttpRequests(auth -> {
             auth.requestMatchers( "/api/v1/authentication/**").permitAll();
             auth.requestMatchers("/error").permitAll()
-                    .requestMatchers("/api/v1/asistente/**").hasAnyAuthority(RolEnum.ASISTENTE.name())
-                    .requestMatchers("/api/v1/admin/**").hasAnyAuthority(RolEnum.ADMIN.name())
+                    .requestMatchers("/api/v1/ASISTENTE/**").hasAnyAuthority(RolEnum.ASISTENTE.name())
+                    .requestMatchers("/api/v1/ADMIN/**").hasAnyAuthority(RolEnum.ADMIN.name())
                     .requestMatchers(  "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll();
+            auth.requestMatchers("/api/v1/clientes/**").hasAnyRole("ADMIN", "ASISTENTE");
+            auth.requestMatchers("/api/v1/productos/**").hasAnyRole("ADMIN", "ASISTENTE");
+            auth.requestMatchers("/api/v1/ventas/**").hasAnyRole("ADMIN", "ASISTENTE");
+            auth.requestMatchers("/api/v1/stock/**").hasAnyRole("ADMIN", "ASISTENTE");
+            auth.requestMatchers("/api/v1/ASISTENTE/**").hasAnyRole("ASISTENTE");
+            auth.anyRequest().authenticated();
+
 
         });
 
