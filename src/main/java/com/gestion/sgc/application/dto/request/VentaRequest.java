@@ -1,5 +1,8 @@
 package com.gestion.sgc.application.dto.request;
 
+import com.gestion.sgc.domain.aggregates.constans.EstadoVenta;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,8 +14,15 @@ import java.util.List;
 @NoArgsConstructor
 public class VentaRequest {
 
-    private Long usuarioId;
+    @NotNull(message = "El ID del cliente es obligatorio")
     private Long clienteId;
+
+    @NotNull(message = "El detalle de venta no puede estar vacío")
+    @Size(min = 1, message = "Debe haber al menos un producto")
     private List<DetalleVentaRequest> detalles;
+
+    private String tipoComprobante;
+
+    private String observacion;
 
 }

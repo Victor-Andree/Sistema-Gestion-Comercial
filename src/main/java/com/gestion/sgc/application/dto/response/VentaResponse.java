@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -12,11 +13,14 @@ import java.time.LocalDateTime;
 public class VentaResponse {
 
     private Long ventaId;
-    private String clienteNombre;
+    private Long usuarioId;
     private String usuarioNombre;
+    private Long clienteId;
+    private String clienteNombre;
     private LocalDateTime fechaVenta;
     private Double total;
     private String estado;
-    private String comprobanteCorrelativo;
+    private ComprobanteResponse comprobante;
+    private List<DetalleVentaResponse> detalles;
 
 }

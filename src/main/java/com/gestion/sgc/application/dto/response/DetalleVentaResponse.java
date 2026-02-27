@@ -1,19 +1,22 @@
-package com.gestion.sgc.domain.aggregates.model;
+package com.gestion.sgc.application.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class DetalleVenta {
+public class DetalleVentaResponse {
 
     private Long detalleVentaId;
-    private Venta venta;
-    private Producto producto;
+    private Long productoId;
+    private String productoNombre;
     private Integer cantidad;
     private Double precioUnitario;
     private Double subtotal;
+
+
 
 }

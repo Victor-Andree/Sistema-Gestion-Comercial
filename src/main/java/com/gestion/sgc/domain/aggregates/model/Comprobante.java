@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 public class Comprobante {
 
     private Long comprobanteId;
+    private Venta venta;
     private TipoComprobante tipo;
     private String correlativo;
     private EstadoComprobante estado;
