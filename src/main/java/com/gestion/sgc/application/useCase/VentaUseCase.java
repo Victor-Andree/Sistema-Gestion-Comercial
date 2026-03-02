@@ -222,7 +222,7 @@ public class VentaUseCase implements VentaIn {
                 .toList();
     }
 
-    // ===== MÉTODOS PRIVADOS =====
+    // MÉTODOS PRIVADOS
 
     private Comprobante crearComprobante(Venta venta, String tipoComprobante) {
         Comprobante comprobante = new Comprobante();

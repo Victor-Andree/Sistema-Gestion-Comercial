@@ -8,6 +8,7 @@ import com.gestion.sgc.domain.ports.outputs.VentaRepositoryPort;
 import com.gestion.sgc.infraestructure.entity.ComprobanteEntity;
 import com.gestion.sgc.infraestructure.entity.DetalleVentaEntity;
 import com.gestion.sgc.infraestructure.entity.VentaEntity;
+import com.gestion.sgc.infraestructure.mapper.ProductoMapper;
 import com.gestion.sgc.infraestructure.mapper.VentaMapper;
 import com.gestion.sgc.infraestructure.repository.ComprobanteJpaRepository;
 import com.gestion.sgc.infraestructure.repository.DetalleVentaJpaRepository;
@@ -28,6 +29,7 @@ public class VentaRepositoryAdapter implements VentaRepositoryPort {
     private final DetalleVentaJpaRepository detalleJpaRepository;
     private final ComprobanteJpaRepository comprobanteJpaRepository;
     private final VentaMapper ventaMapper;
+    private final ProductoMapper productoMapper;
 
     @Override
     public Venta save(Venta venta) {
@@ -77,9 +79,42 @@ public class VentaRepositoryAdapter implements VentaRepositoryPort {
 
     @Override
     public DetalleVenta saveDetalle(DetalleVenta detalle) {
-        DetalleVentaEntity entity = ventaMapper.toEntity(detalle);
+        DetalleVentaEntity entity = new DetalleVentaEntity();
+
+        // Campos básicos , asignacion directa , corrigiendo el bug de precio unitario
+        entity.setCantidad(detalle.getCantidad());
+        entity.setPrecioUnitario(detalle.getPrecioUnitario());
+        entity.setSubtotal(detalle.getSubtotal());
+
+        // Relaciones con mappers específicos
+        if (detalle.getProducto() != null) {
+            entity.setProducto(productoMapper.toEntity(detalle.getProducto()));
+        }
+
+        if (detalle.getVenta() != null) {
+
+            entity.setVenta(ventaMapper.toEntity(detalle.getVenta()));
+        }
+
+        // Guardar
         DetalleVentaEntity saved = detalleJpaRepository.save(entity);
-        return ventaMapper.toDomainFromEntity(saved);
+
+        //  MAPEO INVERSO
+        DetalleVenta resultado = new DetalleVenta();
+        resultado.setDetalleVentaId(saved.getDetalleVentaId());
+        resultado.setCantidad(saved.getCantidad());
+        resultado.setPrecioUnitario(saved.getPrecioUnitario());
+        resultado.setSubtotal(saved.getSubtotal());
+
+        if (saved.getProducto() != null) {
+            resultado.setProducto(productoMapper.toDomainFromEntity(saved.getProducto()));
+        }
+
+        if (saved.getVenta() != null) {
+            resultado.setVenta(ventaMapper.toDomainFromEntity(saved.getVenta()));
+        }
+
+        return resultado;
     }
 
     @Override
