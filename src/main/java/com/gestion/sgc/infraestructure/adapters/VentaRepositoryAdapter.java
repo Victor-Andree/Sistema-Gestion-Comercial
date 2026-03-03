@@ -5,14 +5,12 @@ import com.gestion.sgc.domain.aggregates.model.Comprobante;
 import com.gestion.sgc.domain.aggregates.model.DetalleVenta;
 import com.gestion.sgc.domain.aggregates.model.Venta;
 import com.gestion.sgc.domain.ports.outputs.VentaRepositoryPort;
-import com.gestion.sgc.infraestructure.entity.ComprobanteEntity;
-import com.gestion.sgc.infraestructure.entity.DetalleVentaEntity;
-import com.gestion.sgc.infraestructure.entity.VentaEntity;
+import com.gestion.sgc.infraestructure.entity.*;
+import com.gestion.sgc.infraestructure.mapper.ComprobanteMapper;
+import com.gestion.sgc.infraestructure.mapper.DetalleVentaMapper;
 import com.gestion.sgc.infraestructure.mapper.ProductoMapper;
 import com.gestion.sgc.infraestructure.mapper.VentaMapper;
-import com.gestion.sgc.infraestructure.repository.ComprobanteJpaRepository;
-import com.gestion.sgc.infraestructure.repository.DetalleVentaJpaRepository;
-import com.gestion.sgc.infraestructure.repository.VentaJpaRepository;
+import com.gestion.sgc.infraestructure.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -30,11 +28,33 @@ public class VentaRepositoryAdapter implements VentaRepositoryPort {
     private final ComprobanteJpaRepository comprobanteJpaRepository;
     private final VentaMapper ventaMapper;
     private final ProductoMapper productoMapper;
+    private final DetalleVentaMapper detalleVentaMapper;
+    private final ComprobanteMapper comprobanteMapper;
+    private final UsuarioJpaRepository usuarioJpaRepository;
+    private final ClienteJpaRepository clienteJpaRepository;
 
     @Override
     public Venta save(Venta venta) {
+
         VentaEntity entity = ventaMapper.toEntity(venta);
+
+        UsuarioEntity usuarioEntity = usuarioJpaRepository.findById(
+                venta.getUsuario().getUsuarioId()
+        ).orElseThrow();
+
+        ClienteEntity clienteEntity = clienteJpaRepository.findById(
+                venta.getCliente().getClienteId()
+        ).orElseThrow();
+
+        entity.setUsuario(usuarioEntity);
+        entity.setCliente(clienteEntity);
+
+        if (entity.getDetalles() != null) {
+            entity.getDetalles().forEach(detalle -> detalle.setVenta(entity));
+        }
+
         VentaEntity saved = ventaJpaRepository.save(entity);
+
         return ventaMapper.toDomainFromEntity(saved);
     }
 
@@ -79,68 +99,53 @@ public class VentaRepositoryAdapter implements VentaRepositoryPort {
 
     @Override
     public DetalleVenta saveDetalle(DetalleVenta detalle) {
-        DetalleVentaEntity entity = new DetalleVentaEntity();
 
-        // Campos básicos , asignacion directa , corrigiendo el bug de precio unitario
-        entity.setCantidad(detalle.getCantidad());
-        entity.setPrecioUnitario(detalle.getPrecioUnitario());
-        entity.setSubtotal(detalle.getSubtotal());
-
-        // Relaciones con mappers específicos
-        if (detalle.getProducto() != null) {
-            entity.setProducto(productoMapper.toEntity(detalle.getProducto()));
-        }
+        DetalleVentaEntity entity = detalleVentaMapper.toEntity(detalle);
 
         if (detalle.getVenta() != null) {
-
-            entity.setVenta(ventaMapper.toEntity(detalle.getVenta()));
+            VentaEntity ventaRef = new VentaEntity();
+            ventaRef.setVentaId(detalle.getVenta().getVentaId());
+            entity.setVenta(ventaRef);
         }
 
-        // Guardar
         DetalleVentaEntity saved = detalleJpaRepository.save(entity);
 
-        //  MAPEO INVERSO
-        DetalleVenta resultado = new DetalleVenta();
-        resultado.setDetalleVentaId(saved.getDetalleVentaId());
-        resultado.setCantidad(saved.getCantidad());
-        resultado.setPrecioUnitario(saved.getPrecioUnitario());
-        resultado.setSubtotal(saved.getSubtotal());
-
-        if (saved.getProducto() != null) {
-            resultado.setProducto(productoMapper.toDomainFromEntity(saved.getProducto()));
-        }
-
-        if (saved.getVenta() != null) {
-            resultado.setVenta(ventaMapper.toDomainFromEntity(saved.getVenta()));
-        }
-
-        return resultado;
+        return detalleVentaMapper.toDomainFromEntity(saved);
     }
 
     @Override
     public List<DetalleVenta> findDetallesByVentaId(Long ventaId) {
         return detalleJpaRepository.findByVentaVentaId(ventaId).stream()
-                .map(ventaMapper::toDomainFromEntity)
+                .map(detalleVentaMapper::toDomainFromEntity) // 🔥 CORREGIDO
                 .collect(Collectors.toList());
     }
 
     @Override
     public Comprobante saveComprobante(Comprobante comprobante) {
-        ComprobanteEntity entity = ventaMapper.toEntity(comprobante);
+
+        ComprobanteEntity entity = comprobanteMapper.toEntity(comprobante);
+
+        if (comprobante.getVenta() != null) {
+            VentaEntity ventaRef = new VentaEntity();
+            ventaRef.setVentaId(comprobante.getVenta().getVentaId());
+            entity.setVenta(ventaRef);
+        }
+
         ComprobanteEntity saved = comprobanteJpaRepository.save(entity);
-        return ventaMapper.toDomainFromEntity(saved);
+
+        return comprobanteMapper.toDomainFromEntity(saved);
     }
 
     @Override
     public Optional<Comprobante> findComprobanteByVentaId(Long ventaId) {
         return comprobanteJpaRepository.findByVentaVentaId(ventaId)
-                .map(ventaMapper::toDomainFromEntity);
+                .map(comprobanteMapper::toDomainFromEntity); // 🔥 CORREGIDO
     }
 
     @Override
     public Optional<Comprobante> findComprobanteByCorrelativo(String correlativo) {
         return comprobanteJpaRepository.findByCorrelativo(correlativo)
-                .map(ventaMapper::toDomainFromEntity);
+                .map(comprobanteMapper::toDomainFromEntity);
     }
 
     @Override

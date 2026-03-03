@@ -13,8 +13,6 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface StockMapper {
 
-    StockMapper INSTANCE = Mappers.getMapper(StockMapper.class);
-
     // Entity to Domain
     @Mapping(source = "producto", target = "producto")
     Stock toDomainFromEntity(StockEntity entity);

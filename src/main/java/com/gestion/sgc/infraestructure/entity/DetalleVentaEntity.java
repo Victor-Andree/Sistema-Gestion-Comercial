@@ -33,4 +33,6 @@ public class DetalleVentaEntity {
     @Column(nullable = false)
     private Double subtotal;
 
+
+
 }

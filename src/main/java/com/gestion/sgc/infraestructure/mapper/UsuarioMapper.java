@@ -12,18 +12,13 @@ import org.mapstruct.factory.Mappers;
 @Mapper(componentModel = "spring")
 public interface UsuarioMapper {
 
-
-    UsuarioMapper INSTANCE = Mappers.getMapper(UsuarioMapper.class);
-
-
-    // DOMAIN TO ENTITY
+    // ENTITY → DOMAIN
     Usuario toDomainFromEntity(UsuarioEntity entity);
 
-    // ENTITY TO DOMAIN
+    // DOMAIN → ENTITY
     UsuarioEntity toEntity(Usuario usuario);
 
-
-    // Response combinado (Usuario + Persona)
+    // Response combinado
     @Mapping(source = "usuario.usuarioId", target = "usuarioId")
     @Mapping(source = "persona.personaId", target = "personaId")
     @Mapping(source = "persona.nombre", target = "nombre")

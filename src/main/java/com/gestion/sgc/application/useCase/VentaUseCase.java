@@ -13,6 +13,8 @@ import com.gestion.sgc.domain.ports.outputs.ProductoRepositoryPort;
 import com.gestion.sgc.domain.ports.outputs.StockRepositoryPort;
 import com.gestion.sgc.domain.ports.outputs.VentaRepositoryPort;
 import com.gestion.sgc.domain.ports.outputs.auth.UsuarioRepositoryPort;
+import com.gestion.sgc.infraestructure.mapper.ComprobanteMapper;
+import com.gestion.sgc.infraestructure.mapper.DetalleVentaMapper;
 import com.gestion.sgc.infraestructure.mapper.VentaMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -38,16 +40,19 @@ public class VentaUseCase implements VentaIn {
     private final UsuarioRepositoryPort usuarioRepository;
     private final StockRepositoryPort stockRepository;
     private final VentaMapper ventaMapper;
+    private final DetalleVentaMapper detalleVentaMapper;
+    private final ComprobanteMapper comprobanteMapper;
 
     @Override
     @Transactional
     public VentaResponse registrarVenta(VentaRequest request) {
-        // 1. Obtener usuario actual (vendedor)
+
+        // 1. Usuario actual
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Usuario usuario = usuarioRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        // 2. Obtener cliente
+        // 2. Cliente
         Cliente cliente = clienteRepository.findById(request.getClienteId())
                 .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
 
@@ -61,15 +66,18 @@ public class VentaUseCase implements VentaIn {
         double totalVenta = 0.0;
         List<DetalleVenta> detalles = new ArrayList<>();
 
-        // 4. Procesar cada detalle
+        // 4. Procesar detalles
         for (DetalleVentaRequest detalleReq : request.getDetalles()) {
-            // Obtener producto
-            Producto producto = productoRepository.findById(detalleReq.getProductoId())
-                    .orElseThrow(() -> new RuntimeException("Producto no encontrado: " + detalleReq.getProductoId()));
 
-            // Verificar stock
-            Optional<Stock> stockOpt = stockRepository.findByProductoId(detalleReq.getProductoId());
-            if (stockOpt.isEmpty() || stockOpt.get().getCantidadActual() < detalleReq.getCantidad()) {
+            Producto producto = productoRepository.findById(detalleReq.getProductoId())
+                    .orElseThrow(() -> new RuntimeException(
+                            "Producto no encontrado: " + detalleReq.getProductoId()));
+
+            Stock stock = stockRepository.findByProductoId(detalleReq.getProductoId())
+                    .orElseThrow(() -> new RuntimeException(
+                            "Stock no encontrado para: " + producto.getNombre()));
+
+            if (stock.getCantidadActual() < detalleReq.getCantidad()) {
                 throw new RuntimeException("Stock insuficiente para: " + producto.getNombre());
             }
 
@@ -78,9 +86,9 @@ public class VentaUseCase implements VentaIn {
             totalVenta += subtotal;
 
             // Crear detalle
-            DetalleVenta detalle = ventaMapper.toDomainFromRequest(detalleReq);
-            detalle.setProducto(producto);
+            DetalleVenta detalle = new DetalleVenta();
             detalle.setVenta(venta);
+            detalle.setProducto(producto);
             detalle.setCantidad(detalleReq.getCantidad());
             detalle.setPrecioUnitario(producto.getPrecioVenta());
             detalle.setSubtotal(subtotal);
@@ -88,28 +96,26 @@ public class VentaUseCase implements VentaIn {
             detalles.add(detalle);
 
             // Actualizar stock
-            Stock stock = stockOpt.get();
             stock.setCantidadActual(stock.getCantidadActual() - detalleReq.getCantidad());
             stock.setFechaActualizacion(LocalDateTime.now());
             stockRepository.save(stock);
         }
 
-        // 5. Guardar venta
+        // 5. Asignar total y detalles
         venta.setTotal(totalVenta);
-        Venta ventaGuardada = ventaRepository.save(venta);
+        venta.setDetalles(detalles);
 
-        // 6. Guardar detalles
-        for (DetalleVenta detalle : detalles) {
-            detalle.setVenta(ventaGuardada);
-            ventaRepository.saveDetalle(detalle);
-        }
+        // 6. Guardar TODO en cascada
+        Venta ventaGuardada = ventaRepository.save(venta);
 
         // 7. Crear comprobante
         Comprobante comprobante = crearComprobante(ventaGuardada, request.getTipoComprobante());
         ventaGuardada.setComprobante(comprobante);
 
         log.info("Venta registrada: ID={}, Total=S/{}, Cliente={}",
-                ventaGuardada.getVentaId(), totalVenta, cliente.getPersona().getNombre());
+                ventaGuardada.getVentaId(),
+                totalVenta,
+                cliente.getPersona().getNombre());
 
         return buildVentaResponse(ventaGuardada, detalles);
     }
@@ -178,7 +184,6 @@ public class VentaUseCase implements VentaIn {
 
         venta.setEstado(EstadoVenta.ANULADA);
 
-        // Revertir stock (devolver productos)
         List<DetalleVenta> detalles = ventaRepository.findDetallesByVentaId(id);
         for (DetalleVenta detalle : detalles) {
             Optional<Stock> stockOpt = stockRepository.findByProductoId(detalle.getProducto().getProductoId());
@@ -189,7 +194,6 @@ public class VentaUseCase implements VentaIn {
             });
         }
 
-        // Anular comprobante
         Optional<Comprobante> comprobanteOpt = ventaRepository.findComprobanteByVentaId(id);
         comprobanteOpt.ifPresent(comp -> {
             comp.setEstado(EstadoComprobante.ANULADO);
@@ -258,11 +262,15 @@ public class VentaUseCase implements VentaIn {
     }
 
     private VentaResponse buildVentaResponse(Venta venta, List<DetalleVenta> detalles) {
-        VentaResponse response = ventaMapper.toResponse(venta);
-        response.setDetalles(ventaMapper.toDetalleResponseList(detalles));
 
-        ventaRepository.findComprobanteByVentaId(venta.getVentaId())
-                .ifPresent(comp -> response.setComprobante(ventaMapper.toResponse(comp)));
+        VentaResponse response = ventaMapper.toResponse(venta);
+
+        response.setDetalles(detalleVentaMapper.toResponseList(detalles));
+
+            ventaRepository.findComprobanteByVentaId(venta.getVentaId())
+                .ifPresent(comp ->
+                        response.setComprobante(comprobanteMapper.toResponse(comp))
+                );
 
         return response;
     }

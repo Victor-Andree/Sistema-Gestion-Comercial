@@ -15,8 +15,6 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface PersonaMapper {
 
-    PersonaMapper INSTANCE = Mappers.getMapper(PersonaMapper.class);
-
     //  DOMAIN TO ENTITY
     Persona toDomainFromEntity(PersonaEntity entity);
 

@@ -1,16 +1,15 @@
 package com.gestion.sgc.domain.aggregates.model;
 
 import com.gestion.sgc.domain.aggregates.constans.EstadoVenta;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Data
-@AllArgsConstructor
+@Getter
+@Setter
 @NoArgsConstructor
+@AllArgsConstructor
 public class Venta {
 
     private Long ventaId;

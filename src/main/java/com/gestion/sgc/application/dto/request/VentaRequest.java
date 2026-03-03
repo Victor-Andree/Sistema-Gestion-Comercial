@@ -1,6 +1,5 @@
 package com.gestion.sgc.application.dto.request;
 
-import com.gestion.sgc.domain.aggregates.constans.EstadoVenta;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;

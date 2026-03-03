@@ -11,8 +11,6 @@ import org.mapstruct.factory.Mappers;
 @Mapper (componentModel = "spring")
 public interface ClienteMapper {
 
-    ClienteMapper INSTANCE = Mappers.getMapper(ClienteMapper.class);
-
     // Entity to Domain
     @Mapping(source = "clienteId", target = "clienteId")
     @Mapping(source = "fechaRegistro", target = "fechaRegistro")

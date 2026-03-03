@@ -2,15 +2,14 @@ package com.gestion.sgc.domain.aggregates.model;
 
 import com.gestion.sgc.domain.aggregates.constans.EstadoComprobante;
 import com.gestion.sgc.domain.aggregates.constans.TipoComprobante;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
-@Data
-@AllArgsConstructor
+@Getter
+@Setter
 @NoArgsConstructor
+@AllArgsConstructor
 public class Comprobante {
 
     private Long comprobanteId;

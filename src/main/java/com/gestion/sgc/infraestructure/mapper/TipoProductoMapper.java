@@ -14,9 +14,6 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface TipoProductoMapper {
 
-    TipoProductoMapper INSTANCE = Mappers.getMapper(TipoProductoMapper.class);
-
-
     // ENTITY to DOMAIN
     TipoProducto toDomainFromEntity(TipoProductoEntity entity);
     TipoProductoEntity toEntity(TipoProducto tipoProducto);
