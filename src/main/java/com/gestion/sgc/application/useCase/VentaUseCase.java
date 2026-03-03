@@ -178,7 +178,7 @@ public class VentaUseCase implements VentaIn {
         Venta venta = ventaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Venta no encontrada: " + id));
 
-        if (!"COMPLETADA".equals(venta.getEstado())) {
+        if (venta.getEstado() == EstadoVenta.ANULADA) {
             throw new RuntimeException("La venta ya está anulada");
         }
 

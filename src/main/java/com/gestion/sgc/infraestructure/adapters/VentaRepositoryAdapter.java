@@ -139,7 +139,7 @@ public class VentaRepositoryAdapter implements VentaRepositoryPort {
     @Override
     public Optional<Comprobante> findComprobanteByVentaId(Long ventaId) {
         return comprobanteJpaRepository.findByVentaVentaId(ventaId)
-                .map(comprobanteMapper::toDomainFromEntity); // 🔥 CORREGIDO
+                .map(comprobanteMapper::toDomainFromEntity);
     }
 
     @Override
