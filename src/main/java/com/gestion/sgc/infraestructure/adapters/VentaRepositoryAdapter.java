@@ -1,6 +1,7 @@
 package com.gestion.sgc.infraestructure.adapters;
 
 
+import com.gestion.sgc.domain.aggregates.constans.EstadoVenta;
 import com.gestion.sgc.domain.aggregates.model.Comprobante;
 import com.gestion.sgc.domain.aggregates.model.DetalleVenta;
 import com.gestion.sgc.domain.aggregates.model.Venta;
@@ -11,6 +12,7 @@ import com.gestion.sgc.infraestructure.mapper.DetalleVentaMapper;
 import com.gestion.sgc.infraestructure.mapper.ProductoMapper;
 import com.gestion.sgc.infraestructure.mapper.VentaMapper;
 import com.gestion.sgc.infraestructure.repository.*;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -34,23 +36,54 @@ public class VentaRepositoryAdapter implements VentaRepositoryPort {
     private final ClienteJpaRepository clienteJpaRepository;
 
     @Override
+    @Transactional
     public Venta save(Venta venta) {
 
-        VentaEntity entity = ventaMapper.toEntity(venta);
+        VentaEntity entity;
 
-        UsuarioEntity usuarioEntity = usuarioJpaRepository.findById(
-                venta.getUsuario().getUsuarioId()
-        ).orElseThrow();
+        if (venta.getVentaId() != null) {
 
-        ClienteEntity clienteEntity = clienteJpaRepository.findById(
-                venta.getCliente().getClienteId()
-        ).orElseThrow();
+            entity = ventaJpaRepository.findById(venta.getVentaId())
+                    .orElseThrow(() -> new RuntimeException("Venta no encontrada"));
 
-        entity.setUsuario(usuarioEntity);
-        entity.setCliente(clienteEntity);
+            // actualizar solo campos modificables
+            entity.setEstado(venta.getEstado());
+            entity.setTotal(venta.getTotal());
 
-        if (entity.getDetalles() != null) {
-            entity.getDetalles().forEach(detalle -> detalle.setVenta(entity));
+            // 🔥 SI HAY COMPROBANTE Y AÚN NO EXISTE EN ENTITY
+            if (venta.getComprobante() != null && entity.getComprobante() == null) {
+
+                Comprobante comprobanteDomain = venta.getComprobante();
+
+                ComprobanteEntity comprobanteEntity = new ComprobanteEntity();
+
+                comprobanteEntity.setTipo(comprobanteDomain.getTipo());
+                comprobanteEntity.setCorrelativo(comprobanteDomain.getCorrelativo());
+                comprobanteEntity.setEstado(comprobanteDomain.getEstado());
+                comprobanteEntity.setFechaEmision(comprobanteDomain.getFechaEmision());
+
+                comprobanteEntity.setVenta(entity);
+
+                entity.setComprobante(comprobanteEntity);
+            }
+
+        } else {
+            entity = ventaMapper.toEntity(venta);
+
+            UsuarioEntity usuarioEntity = usuarioJpaRepository.findById(
+                    venta.getUsuario().getUsuarioId()
+            ).orElseThrow();
+
+            ClienteEntity clienteEntity = clienteJpaRepository.findById(
+                    venta.getCliente().getClienteId()
+            ).orElseThrow();
+
+            entity.setUsuario(usuarioEntity);
+            entity.setCliente(clienteEntity);
+
+            if (entity.getDetalles() != null) {
+                entity.getDetalles().forEach(detalle -> detalle.setVenta(entity));
+            }
         }
 
         VentaEntity saved = ventaJpaRepository.save(entity);
@@ -62,6 +95,14 @@ public class VentaRepositoryAdapter implements VentaRepositoryPort {
     public Optional<Venta> findById(Long id) {
         return ventaJpaRepository.findById(id)
                 .map(ventaMapper::toDomainFromEntity);
+    }
+
+    @Override
+    public List<Venta> findByEstado(EstadoVenta estado) {
+        return ventaJpaRepository.findByEstado(estado)
+                .stream()
+                .map(ventaMapper::toDomain)
+                .toList();
     }
 
     @Override

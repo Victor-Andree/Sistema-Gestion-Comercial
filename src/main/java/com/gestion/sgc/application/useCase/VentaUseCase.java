@@ -121,13 +121,94 @@ public class VentaUseCase implements VentaIn {
     }
 
     @Override
-    public Optional<VentaResponse> buscarPorId(Long id) {
-        return ventaRepository.findById(id)
-                .map(venta -> {
-                    List<DetalleVenta> detalles = ventaRepository.findDetallesByVentaId(id);
-                    return buildVentaResponse(venta, detalles);
-                });
+    @Transactional
+    public VentaResponse registrarVentaPendiente(VentaRequest request) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Usuario usuario = usuarioRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        Cliente cliente = clienteRepository.findById(request.getClienteId())
+                .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+
+        Venta venta = ventaMapper.toDomainFromRequest(request);
+        venta.setUsuario(usuario);
+        venta.setCliente(cliente);
+        venta.setFechaVenta(LocalDateTime.now());
+        venta.setEstado(EstadoVenta.PENDIENTE);
+
+        double totalVenta = 0.0;
+        List<DetalleVenta> detalles = new ArrayList<>();
+
+        for (DetalleVentaRequest detalleReq : request.getDetalles()) {
+
+            Producto producto = productoRepository.findById(detalleReq.getProductoId())
+                    .orElseThrow(() -> new RuntimeException(
+                            "Producto no encontrado: " + detalleReq.getProductoId()));
+
+            double subtotal = producto.getPrecioVenta() * detalleReq.getCantidad();
+            totalVenta += subtotal;
+
+            DetalleVenta detalle = new DetalleVenta();
+            detalle.setVenta(venta);
+            detalle.setProducto(producto);
+            detalle.setCantidad(detalleReq.getCantidad());
+            detalle.setPrecioUnitario(producto.getPrecioVenta());
+            detalle.setSubtotal(subtotal);
+
+            detalles.add(detalle);
+        }
+
+        venta.setTotal(totalVenta);
+        venta.setDetalles(detalles);
+
+        Venta ventaGuardada = ventaRepository.save(venta);
+
+        log.info("Venta registrada como PENDIENTE: ID={}", ventaGuardada.getVentaId());
+
+        return buildVentaResponse(ventaGuardada, detalles);
     }
+
+    @Override
+    @Transactional
+    public VentaResponse confirmarVenta(Long id) {
+
+        Venta venta = ventaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Venta no encontrada"));
+
+        if (venta.getEstado() != EstadoVenta.PENDIENTE) {
+            throw new IllegalStateException("Solo se pueden confirmar ventas pendientes");
+        }
+
+        List<DetalleVenta> detalles = ventaRepository.findDetallesByVentaId(id);
+
+        for (DetalleVenta detalle : detalles) {
+
+            Stock stock = stockRepository
+                    .findByProductoId(detalle.getProducto().getProductoId())
+                    .orElseThrow(() -> new RuntimeException(
+                            "Stock no encontrado para: " + detalle.getProducto().getNombre()));
+
+            if (stock.getCantidadActual() < detalle.getCantidad()) {
+                throw new RuntimeException(
+                        "Stock insuficiente para: " + detalle.getProducto().getNombre());
+            }
+
+            stock.setCantidadActual(stock.getCantidadActual() - detalle.getCantidad());
+            stock.setFechaActualizacion(LocalDateTime.now());
+            stockRepository.save(stock);
+        }
+
+        venta.setEstado(EstadoVenta.COMPLETADA);
+
+        Comprobante comprobante = crearComprobante(venta, "BOLETA");
+        venta.setComprobante(comprobante);
+
+        Venta ventaConfirmada = ventaRepository.save(venta);
+        log.info("Venta confirmada: ID={}", id);
+
+        return buildVentaResponse(ventaConfirmada, detalles);
+    }
+
 
     @Override
     public List<VentaResponse> listarPorFecha(LocalDate fecha) {
@@ -141,6 +222,19 @@ public class VentaUseCase implements VentaIn {
                 })
                 .toList();
     }
+
+
+    @Override
+    public Optional<VentaResponse> buscarPorId(Long id) {
+        return ventaRepository.findById(id)
+                .map(venta -> {
+                    List<DetalleVenta> detalles = ventaRepository.findDetallesByVentaId(id);
+                    return buildVentaResponse(venta, detalles);
+                });
+    }
+
+
+
 
     @Override
     public List<VentaResponse> listarPorCliente(Long clienteId) {
@@ -182,28 +276,54 @@ public class VentaUseCase implements VentaIn {
             throw new RuntimeException("La venta ya está anulada");
         }
 
-        venta.setEstado(EstadoVenta.ANULADA);
-
         List<DetalleVenta> detalles = ventaRepository.findDetallesByVentaId(id);
-        for (DetalleVenta detalle : detalles) {
-            Optional<Stock> stockOpt = stockRepository.findByProductoId(detalle.getProducto().getProductoId());
-            stockOpt.ifPresent(stock -> {
-                stock.setCantidadActual(stock.getCantidadActual() + detalle.getCantidad());
-                stock.setFechaActualizacion(LocalDateTime.now());
-                stockRepository.save(stock);
-            });
+
+        // Si estaba COMPLETADA entonces devolver stock
+        if (venta.getEstado() == EstadoVenta.COMPLETADA) {
+
+            for (DetalleVenta detalle : detalles) {
+                stockRepository.findByProductoId(detalle.getProducto().getProductoId())
+                        .ifPresent(stock -> {
+                            stock.setCantidadActual(
+                                    stock.getCantidadActual() + detalle.getCantidad());
+                            stock.setFechaActualizacion(LocalDateTime.now());
+                            stockRepository.save(stock);
+                        });
+            }
+
+            // anular comprobante
+            ventaRepository.findComprobanteByVentaId(id)
+                    .ifPresent(comp -> {
+                        comp.setEstado(EstadoComprobante.ANULADO);
+                        ventaRepository.saveComprobante(comp);
+                    });
         }
 
-        Optional<Comprobante> comprobanteOpt = ventaRepository.findComprobanteByVentaId(id);
-        comprobanteOpt.ifPresent(comp -> {
-            comp.setEstado(EstadoComprobante.ANULADO);
-            ventaRepository.saveComprobante(comp);
-        });
+        // Si estaba PENDIENTE entonces NO tocar stock
+
+
+        venta.setEstado(EstadoVenta.ANULADA);
 
         Venta ventaAnulada = ventaRepository.save(venta);
+
         log.info("Venta anulada: ID={}, Motivo={}", id, motivo);
 
         return buildVentaResponse(ventaAnulada, detalles);
+    }
+
+    @Override
+    @Transactional
+    public List<VentaResponse> listarVentasPendientes() {
+
+        List<Venta> ventas = ventaRepository.findByEstado(EstadoVenta.PENDIENTE);
+
+        return ventas.stream()
+                .map(venta -> {
+                    List<DetalleVenta> detalles =
+                            ventaRepository.findDetallesByVentaId(venta.getVentaId());
+                    return buildVentaResponse(venta, detalles);
+                })
+                .toList();
     }
 
     @Override
@@ -240,10 +360,12 @@ public class VentaUseCase implements VentaIn {
 
 
         comprobante.setCorrelativo(generarCorrelativo());
-        comprobante.setEstado(EstadoComprobante.EMITIDO );
+        comprobante.setEstado(EstadoComprobante.EMITIDO);
         comprobante.setFechaEmision(LocalDateTime.now());
+        comprobante.setVenta(venta);
+        venta.setComprobante(comprobante);
 
-        return ventaRepository.saveComprobante(comprobante);
+        return comprobante;
     }
 
     private String generarCorrelativo() {

@@ -1,5 +1,6 @@
 package com.gestion.sgc.domain.ports.outputs;
 
+import com.gestion.sgc.domain.aggregates.constans.EstadoVenta;
 import com.gestion.sgc.domain.aggregates.model.Comprobante;
 import com.gestion.sgc.domain.aggregates.model.DetalleVenta;
 import com.gestion.sgc.domain.aggregates.model.Venta;
@@ -16,6 +17,7 @@ public interface VentaRepositoryPort {
     List<Venta> findByFechaBetween(LocalDateTime inicio, LocalDateTime fin);
     List<Venta> findByClienteId(Long clienteId);
     List<Venta> findByUsuarioId(Long usuarioId);
+    List<Venta> findByEstado(EstadoVenta estado);
     void deleteById(Long id);
 
     DetalleVenta saveDetalle(DetalleVenta detalle);

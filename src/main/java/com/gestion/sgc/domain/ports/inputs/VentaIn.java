@@ -27,5 +27,11 @@ public interface VentaIn {
 
     List<VentaResponse> listarPorRangoFechas(LocalDate desde, LocalDate hasta);
 
+    VentaResponse registrarVentaPendiente(VentaRequest request);
+
+    VentaResponse confirmarVenta(Long id);
+
+    List<VentaResponse> listarVentasPendientes();
+
 
 }

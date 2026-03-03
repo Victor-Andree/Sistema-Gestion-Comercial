@@ -4,8 +4,10 @@ import com.gestion.sgc.application.dto.request.VentaRequest;
 import com.gestion.sgc.application.dto.response.VentaResponse;
 import com.gestion.sgc.domain.aggregates.model.Venta;
 import com.gestion.sgc.infraestructure.entity.VentaEntity;
+import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 
 import java.util.List;
 
@@ -20,8 +22,15 @@ public interface VentaMapper {
 
     Venta toDomainFromEntity(VentaEntity entity);
 
+    Venta toDomain(VentaEntity entity);
 
     VentaEntity toEntity(Venta venta);
+    @AfterMapping
+    default void linkDetalles(@MappingTarget VentaEntity entity) {
+        if (entity.getDetalles() != null) {
+            entity.getDetalles().forEach(detalle -> detalle.setVenta(entity));
+        }
+    }
 
 
     @Mapping(target = "usuarioId", source = "usuario.usuarioId")

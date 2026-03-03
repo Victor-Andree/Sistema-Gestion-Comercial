@@ -33,6 +33,33 @@ public class VentaController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    @Operation(summary = "Registrar una venta como PENDIENTE (reserva)")
+    @PostMapping("/pendiente")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'ASISTENTE')")
+    public ResponseEntity<VentaResponse> registrarVentaPendiente(
+            @Valid @RequestBody VentaRequest request) {
+
+        VentaResponse response = ventaIn.registrarVentaPendiente(request);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @Operation(summary = "Confirmar una venta pendiente y convertirla en COMPLETADA")
+    @PutMapping("/{id}/confirmar")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'ASISTENTE')")
+    public ResponseEntity<VentaResponse> confirmarVenta(@PathVariable Long id) {
+
+        VentaResponse response = ventaIn.confirmarVenta(id);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Listar ventas pendientes (reservas activas)")
+    @GetMapping("/pendientes")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'ASISTENTE')")
+    public ResponseEntity<List<VentaResponse>> listarVentasPendientes() {
+        return ResponseEntity.ok(ventaIn.listarVentasPendientes());
+    }
+
+
     @Operation(summary = "Buscar venta por ID")
     @GetMapping("/{id}")
     public ResponseEntity<VentaResponse> buscarPorId(@PathVariable Long id) {

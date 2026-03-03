@@ -1,5 +1,6 @@
 package com.gestion.sgc.infraestructure.repository;
 
+import com.gestion.sgc.domain.aggregates.constans.EstadoVenta;
 import com.gestion.sgc.infraestructure.entity.VentaEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -16,7 +17,8 @@ public interface VentaJpaRepository extends JpaRepository<VentaEntity, Long> {
 
     List<VentaEntity> findByUsuarioUsuarioId(Long usuarioId);
 
-    List<VentaEntity> findByEstado(String estado);
+    List<VentaEntity> findByEstado(EstadoVenta estado);
+
 
     List<VentaEntity> findByClienteClienteIdAndFechaVentaBetween(
             Long clienteId, LocalDateTime inicio, LocalDateTime fin);
