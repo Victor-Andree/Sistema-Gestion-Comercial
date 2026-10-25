@@ -95,7 +95,7 @@ public class VentaController {
 
     @Operation(summary = "Anular una venta")
     @PutMapping("/{id}/anular")
-    @PreAuthorize("hasRole('ADMIN')") // Solo ADMIN puede anular
+    @PreAuthorize("hasAnyRole('ADMIN', 'ASISTENTE')")
     public ResponseEntity<VentaResponse> anularVenta(
             @PathVariable Long id,
             @RequestParam String motivo) {
