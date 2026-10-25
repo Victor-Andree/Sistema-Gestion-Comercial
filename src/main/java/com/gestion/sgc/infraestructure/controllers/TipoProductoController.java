@@ -19,14 +19,14 @@ import java.util.List;
 @RequestMapping("/api/v1/tiposproducto")
 @RequiredArgsConstructor
 @Tag(name = "Tipos de Producto", description = "Gestión de categorías de productos")
-@PreAuthorize("hasAnyAuthority('ADMIN', 'ASISTENTE')")
+@PreAuthorize("hasAnyRole('ADMIN', 'ASISTENTE')")
 public class TipoProductoController {
 
     private final TipoProductoIn tipoProductoIn;
 
     @Operation(summary = "Crear nuevo tipo de producto")
     @PostMapping
-    @PreAuthorize("hasAuthority('ADMIN')") // Solo ADMIN puede crear
+    @PreAuthorize("hasRole('ADMIN')") // Solo ADMIN puede crear
     public ResponseEntity<TipoProductoResponse> crearTipoProducto(@Valid @RequestBody TipoProductoRequest request) {
         TipoProductoResponse response = tipoProductoIn.createTipoProducto(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
@@ -57,7 +57,7 @@ public class TipoProductoController {
 
     @Operation(summary = "Eliminar tipo de producto")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> eliminarTipoProducto(@PathVariable Long id) {
         tipoProductoIn.deleteTipoProducto(id);
         return ResponseEntity.noContent().build();
