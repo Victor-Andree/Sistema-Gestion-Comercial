@@ -1,7 +1,6 @@
 package com.gestion.sgc.infraestructure.security.config;
 
 
-import com.gestion.sgc.domain.aggregates.constans.RolEnum;
 import com.gestion.sgc.infraestructure.security.filters.JwtTokenValidatorFilter;
 import com.gestion.sgc.infraestructure.security.services.CustomAuthenticationEntryPoint;
 import org.springframework.context.annotation.Bean;
@@ -13,6 +12,7 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -29,6 +29,7 @@ import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtTokenValidatorFilter jwtTokenValidatorFilter;
@@ -56,14 +57,13 @@ public class SecurityConfig {
         httpSecurity.authorizeHttpRequests(auth -> {
             auth.requestMatchers( "/api/v1/authentication/**").permitAll();
             auth.requestMatchers("/error").permitAll()
-                    .requestMatchers("/api/v1/ASISTENTE/**").hasAnyAuthority(RolEnum.ASISTENTE.name())
-                    .requestMatchers("/api/v1/ADMIN/**").hasAnyAuthority(RolEnum.ADMIN.name())
+                    .requestMatchers("/api/v1/ASISTENTE/**").hasRole("ASISTENTE")
+                    .requestMatchers("/api/v1/ADMIN/**").hasRole("ADMIN")
                     .requestMatchers(  "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll();
             auth.requestMatchers("/api/v1/clientes/**").hasAnyRole("ADMIN", "ASISTENTE");
             auth.requestMatchers("/api/v1/productos/**").hasAnyRole("ADMIN", "ASISTENTE");
             auth.requestMatchers("/api/v1/ventas/**").hasAnyRole("ADMIN", "ASISTENTE");
-            auth.requestMatchers("/api/v1/stock/**").hasAnyRole("ADMIN", "ASISTENTE");
-            auth.requestMatchers("/api/v1/ASISTENTE/**").hasAnyRole("ASISTENTE");
+            auth.requestMatchers("/api/v1/stocks/**", "/api/v1/tiposproducto/**").hasAnyRole("ADMIN", "ASISTENTE");
             auth.anyRequest().authenticated();
 
 
@@ -86,7 +86,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
 

@@ -19,14 +19,14 @@ import java.util.List;
 @RequestMapping("/api/v1/stocks")
 @RequiredArgsConstructor
 @Tag(name = "Stock", description = "Endpoints para gestión de inventario")
-@PreAuthorize("hasAnyAuthority('ADMIN', 'ASISTENTE')")
+@PreAuthorize("hasAnyRole('ADMIN', 'ASISTENTE')")
 public class StockController {
 
     private final StockIn stockIn;
 
     @Operation(summary = "Crear stock inicial para un producto nuevo")
     @PostMapping("/initial")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'ASISTENTE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ASISTENTE')")
     public ResponseEntity<StockResponse> createInitialStock(@Valid @RequestBody StockRequest request) {
         StockResponse response = stockIn.createInitialStock(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
@@ -54,7 +54,7 @@ public class StockController {
 
     @Operation(summary = "Actualizar stock (ingreso o salida)")
     @PutMapping("/{productId}")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'ASISTENTE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ASISTENTE')")
     public ResponseEntity<StockResponse> updateStock(
             @PathVariable Long productId,
             @RequestParam Integer quantity,
@@ -65,7 +65,7 @@ public class StockController {
 
     @Operation(summary = "Ajustar stock por inventario físico")
     @PatchMapping("/adjust/{productId}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<StockResponse> adjustStock(
             @PathVariable Long productId,
             @RequestParam Integer realQuantity,

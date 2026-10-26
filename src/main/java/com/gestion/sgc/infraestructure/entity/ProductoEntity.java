@@ -21,13 +21,13 @@ public class ProductoEntity {
     @Column(unique = true, nullable = false)
     private String nombre;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false)
     private String descripcion;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false)
     private Double precioVenta;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false)
     private int stockMinimo;
 
     @Enumerated(EnumType.STRING)

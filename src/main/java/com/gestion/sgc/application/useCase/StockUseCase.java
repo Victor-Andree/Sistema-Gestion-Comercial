@@ -15,6 +15,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import org.springframework.web.server.ResponseStatusException;
+import static org.springframework.http.HttpStatus.*;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -30,13 +33,14 @@ public class StockUseCase implements StockIn {
     @Override
     @Transactional
     public StockResponse createInitialStock(StockRequest request) {
+        validarCantidad(request.getCantidadInicial(), true);
         // Verificar que el producto existe
         Producto producto = productoRepository.findById(request.getProductoId())
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado con ID: " + request.getProductoId()));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Producto no encontrado con ID: " + request.getProductoId()));
 
         // Verificar que el producto no tenga stock ya asignado
         if (stockRepository.existsByProductoId(request.getProductoId())) {
-            throw new RuntimeException("El producto ya tiene un registro de stock");
+            throw new ResponseStatusException(CONFLICT, "El producto ya tiene un registro de stock");
         }
 
         // Crear stock
@@ -83,25 +87,30 @@ public class StockUseCase implements StockIn {
     @Override
     @Transactional
     public StockResponse updateStock(Long productId, Integer quantity, String type) {
+        validarCantidad(quantity, false);
         // Buscar stock
         Stock stock = stockRepository.findByProductoId(productId)
-                .orElseThrow(() -> new RuntimeException("Stock no encontrado para producto ID: " + productId));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Stock no encontrado para producto ID: " + productId));
 
         int cantidadAnterior = stock.getCantidadActual();
         int cantidadNueva;
 
         // Procesar según tipo de movimiento
         if ("INCOME".equalsIgnoreCase(type)) {
-            cantidadNueva = cantidadAnterior + quantity;
+            try {
+                cantidadNueva = Math.addExact(cantidadAnterior, quantity);
+            } catch (ArithmeticException ex) {
+                throw new ResponseStatusException(BAD_REQUEST, "La cantidad excede el máximo permitido");
+            }
             log.info("INGRESO de stock: +{} unidades para producto ID: {}", quantity, productId);
         } else if ("OUTCOME".equalsIgnoreCase(type)) {
             if (cantidadAnterior < quantity) {
-                throw new RuntimeException("Stock insuficiente. Disponible: " + cantidadAnterior);
+                throw new ResponseStatusException(CONFLICT, "Stock insuficiente. Disponible: " + cantidadAnterior);
             }
             cantidadNueva = cantidadAnterior - quantity;
             log.info("SALIDA de stock: -{} unidades para producto ID: {}", quantity, productId);
         } else {
-            throw new RuntimeException("Tipo de movimiento inválido: " + type);
+            throw new ResponseStatusException(BAD_REQUEST, "Tipo de movimiento inválido: " + type);
         }
 
         // Actualizar stock
@@ -115,9 +124,10 @@ public class StockUseCase implements StockIn {
     @Override
     @Transactional
     public StockResponse adjustStock(Long productId, Integer realQuantity, String observation) {
+        validarCantidad(realQuantity, true);
         // Buscar stock
         Stock stock = stockRepository.findByProductoId(productId)
-                .orElseThrow(() -> new RuntimeException("Stock no encontrado para producto ID: " + productId));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Stock no encontrado para producto ID: " + productId));
 
         int cantidadAnterior = stock.getCantidadActual();
 
@@ -135,6 +145,7 @@ public class StockUseCase implements StockIn {
 
     @Override
     public boolean checkAvailability(Long productId, Integer requiredQuantity) {
+        validarCantidad(requiredQuantity, false);
         return stockRepository.findByProductoId(productId)
                 .map(stock -> stock.getCantidadActual() >= requiredQuantity)
                 .orElse(false);
@@ -149,4 +160,10 @@ public class StockUseCase implements StockIn {
     }
 
 
+    private void validarCantidad(Integer cantidad, boolean permitirCero) {
+        if (cantidad == null || (permitirCero ? cantidad < 0 : cantidad <= 0)) {
+            throw new ResponseStatusException(BAD_REQUEST,
+                    permitirCero ? "La cantidad no puede ser negativa" : "La cantidad debe ser mayor a cero");
+        }
+    }
 }

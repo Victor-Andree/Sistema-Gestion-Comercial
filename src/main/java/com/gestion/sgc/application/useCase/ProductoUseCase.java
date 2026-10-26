@@ -6,6 +6,8 @@ import com.gestion.sgc.application.dto.response.ProductoResponse;
 import com.gestion.sgc.domain.aggregates.constans.EstadoProducto;
 import com.gestion.sgc.domain.aggregates.model.Producto;
 import com.gestion.sgc.domain.aggregates.model.TipoProducto;
+import com.gestion.sgc.domain.aggregates.model.Stock;
+import com.gestion.sgc.domain.ports.outputs.StockRepositoryPort;
 import com.gestion.sgc.domain.ports.inputs.ProductosIn;
 import com.gestion.sgc.domain.ports.outputs.ProductoRepositoryPort;
 import com.gestion.sgc.domain.ports.outputs.TipoProductoRepositoryPort;
@@ -14,8 +16,12 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import org.springframework.web.server.ResponseStatusException;
+import static org.springframework.http.HttpStatus.*;
+
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -24,18 +30,22 @@ public class ProductoUseCase implements ProductosIn {
     private final ProductoRepositoryPort productoRepository;
     private final TipoProductoRepositoryPort tipoProductoRepository;
     private final ProductoMapper productoMapper;
+    private final StockRepositoryPort stockRepository;
 
     @Override
     @Transactional
     public ProductoResponse createProducto(ProductoRequest request) {
+        if (request.getCantidadInicial() != null && request.getCantidadInicial() < 0) {
+            throw new ResponseStatusException(BAD_REQUEST, "El stock inicial no puede ser negativo");
+        }
         // Validar que no exista producto con mismo nombre
         if (productoRepository.existsByNombre(request.getNombre())) {
-            throw new RuntimeException("Ya existe un producto con el nombre: " + request.getNombre());
+            throw new ResponseStatusException(CONFLICT, "Ya existe un producto con el nombre: " + request.getNombre());
         }
 
         // Validar que el tipo de producto exista
         TipoProducto tipoProducto = tipoProductoRepository.findById(request.getTipoProductoId())
-                .orElseThrow(() -> new RuntimeException("Tipo de producto no encontrado con ID: " + request.getTipoProductoId()));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Tipo de producto no encontrado con ID: " + request.getTipoProductoId()));
 
         // Crear producto usando el mapper
         Producto producto = productoMapper.toDomainFromRequest(request);
@@ -46,10 +56,13 @@ public class ProductoUseCase implements ProductosIn {
             producto.setEstadoProducto(EstadoProducto.ACTIVO);  // ← Usando enum
         } else {
             // Convertir String a enum
-            producto.setEstadoProducto(EstadoProducto.valueOf(request.getEstado()));
+            producto.setEstadoProducto(parseEstado(request.getEstado()));
         }
 
         Producto productoCreado = productoRepository.save(producto);
+        if (request.getCantidadInicial() != null) {
+            stockRepository.save(new Stock(null, productoCreado, request.getCantidadInicial(), LocalDateTime.now()));
+        }
         return productoMapper.toResponse(productoCreado);
     }
 
@@ -57,17 +70,17 @@ public class ProductoUseCase implements ProductosIn {
     @Transactional
     public ProductoResponse UpdateProducto(Long id, ProductoRequest request) {
         Producto productoExistente = productoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado con ID: " + id));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Producto no encontrado con ID: " + id));
 
         // Validar nombre único (excepto si es el mismo producto)
         if (!productoExistente.getNombre().equals(request.getNombre())
                 && productoRepository.existsByNombre(request.getNombre())) {
-            throw new RuntimeException("Ya existe otro producto con el nombre: " + request.getNombre());
+            throw new ResponseStatusException(CONFLICT, "Ya existe otro producto con el nombre: " + request.getNombre());
         }
 
         // Validar tipo de producto
         TipoProducto tipoProducto = tipoProductoRepository.findById(request.getTipoProductoId())
-                .orElseThrow(() -> new RuntimeException("Tipo de producto no encontrado con ID: " + request.getTipoProductoId()));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Tipo de producto no encontrado con ID: " + request.getTipoProductoId()));
 
         // Actualizar datos
         productoExistente.setNombre(request.getNombre());
@@ -78,7 +91,7 @@ public class ProductoUseCase implements ProductosIn {
 
         // Actualizar estado si viene en el request
         if (request.getEstado() != null && !request.getEstado().isEmpty()) {
-            productoExistente.setEstadoProducto(EstadoProducto.valueOf(request.getEstado()));
+            productoExistente.setEstadoProducto(parseEstado(request.getEstado()));
         }
 
         Producto productoActualizado = productoRepository.save(productoExistente);
@@ -105,9 +118,9 @@ public class ProductoUseCase implements ProductosIn {
 
     @Override
     public List<ProductoResponse> getAllStockMinimo() {
-        // Asumiendo que stock_minimo es el umbral
         return productoMapper.toResponseList(
-                productoRepository.findByStockBajo(10) // O el valor que consideres
+                stockRepository.findByStockBajo().stream()
+                        .map(Stock::getProducto).toList()
         );
     }
 
@@ -115,7 +128,7 @@ public class ProductoUseCase implements ProductosIn {
     @Transactional
     public void deleteProducto(Long id) {
         if (!productoRepository.existsById(id)) {
-            throw new RuntimeException("Producto no encontrado con ID: " + id);
+            throw new ResponseStatusException(NOT_FOUND, "Producto no encontrado con ID: " + id);
         }
         productoRepository.deleteById(id);
     }
@@ -124,11 +137,18 @@ public class ProductoUseCase implements ProductosIn {
     @Transactional
     public void cambiarEstado(Long id, String estado) {
         Producto producto = productoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado con ID: " + id));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Producto no encontrado con ID: " + id));
 
-        producto.setEstadoProducto(EstadoProducto.valueOf(estado));
+        producto.setEstadoProducto(parseEstado(estado));
         productoRepository.save(producto);
     }
 
 
+    private EstadoProducto parseEstado(String estado) {
+        try {
+            return EstadoProducto.valueOf(estado);
+        } catch (IllegalArgumentException | NullPointerException ex) {
+            throw new ResponseStatusException(BAD_REQUEST, "El estado debe ser ACTIVO o INACTIVO");
+        }
+    }
 }
