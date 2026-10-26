@@ -5,7 +5,6 @@ import com.gestion.sgc.domain.ports.outputs.StockRepositoryPort;
 import com.gestion.sgc.infraestructure.entity.StockEntity;
 import com.gestion.sgc.infraestructure.mapper.StockMapper;
 import com.gestion.sgc.infraestructure.repository.StockJpaRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -13,11 +12,15 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Component
-@RequiredArgsConstructor
 public class StockRepositoryAdapter implements StockRepositoryPort {
 
     private final StockJpaRepository jpaRepository;
     private final StockMapper stockMapper;
+
+    public StockRepositoryAdapter(StockJpaRepository jpaRepository, StockMapper stockMapper) {
+        this.jpaRepository = jpaRepository;
+        this.stockMapper = stockMapper;
+    }
 
     @Override
     public Stock save(Stock stock) {
@@ -34,7 +37,7 @@ public class StockRepositoryAdapter implements StockRepositoryPort {
 
     @Override
     public Optional<Stock> findByProductoId(Long productId) {
-        return jpaRepository.findById(productId)
+        return jpaRepository.findByProductoProductoId(productId)
                 .map(stockMapper::toDomainFromEntity);
     }
 
@@ -59,7 +62,7 @@ public class StockRepositoryAdapter implements StockRepositoryPort {
 
     @Override
     public boolean existsByProductoId(Long productId) {
-        return jpaRepository.existsById(productId);
+        return jpaRepository.existsByProductoProductoId(productId);
     }
 
 
