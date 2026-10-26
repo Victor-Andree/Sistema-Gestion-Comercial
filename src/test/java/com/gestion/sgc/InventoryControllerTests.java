@@ -49,12 +49,21 @@ class InventoryControllerTests {
         }
     }
 
-    @Test void assistantCannotAdjustOrCreateCategories() throws Exception {
+    @Test void assistantCannotMutateInventory() throws Exception {
+        String validProduct = "{\"nombre\":\"Filtro\",\"descripcion\":\"Filtro externo\","
+                + "\"precioVenta\":10,\"stockMinimo\":2,\"cantidadInicial\":5,"
+                + "\"tipoProductoId\":1,\"estado\":\"ACTIVO\"}";
         mvc.perform(patch("/api/v1/stocks/adjust/1").param("realQuantity", "0")
+                .with(user("assistant").roles("ASISTENTE"))).andExpect(status().isForbidden());
+        mvc.perform(put("/api/v1/stocks/1").param("quantity", "1").param("type", "INCOME")
+                .with(user("assistant").roles("ASISTENTE"))).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/productos").contentType("application/json").content(validProduct)
+                .with(user("assistant").roles("ASISTENTE"))).andExpect(status().isForbidden());
+        mvc.perform(put("/api/v1/productos/1").contentType("application/json").content(validProduct)
                 .with(user("assistant").roles("ASISTENTE"))).andExpect(status().isForbidden());
         mvc.perform(post("/api/v1/tiposproducto").contentType("application/json").content("{\"nombre\":\"Filtros\"}")
                 .with(user("assistant").roles("ASISTENTE"))).andExpect(status().isForbidden());
-        verifyNoInteractions(stocks, categories);
+        verifyNoInteractions(products, stocks, categories);
     }
 
     @Test void adminCanAdjust() throws Exception {
@@ -71,7 +80,7 @@ class InventoryControllerTests {
     }
 
     @Test void invalidProductReturnsFieldErrors() throws Exception {
-        mvc.perform(post("/api/v1/productos").with(user("assistant").roles("ASISTENTE"))
+        mvc.perform(post("/api/v1/productos").with(user("admin").roles("ADMIN"))
                 .contentType("application/json").content("{\"nombre\":\" \",\"precioVenta\":-1,\"cantidadInicial\":-1,\"estado\":\"OTRO\"}"))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.errors.nombre").exists())
                 .andExpect(jsonPath("$.errors.cantidadInicial").exists()).andExpect(jsonPath("$.errors.estado").exists());
@@ -82,7 +91,7 @@ class InventoryControllerTests {
         doThrow(new ResponseStatusException(CONFLICT, "Stock insuficiente"))
                 .when(stocks).updateStock(1L, 100, "OUTCOME");
         mvc.perform(put("/api/v1/stocks/1").param("quantity", "100").param("type", "OUTCOME")
-                .with(user("assistant").roles("ASISTENTE")))
+                .with(user("admin").roles("ADMIN")))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.message").value("Stock insuficiente"));
     }
 }

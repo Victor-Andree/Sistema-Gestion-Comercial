@@ -26,7 +26,7 @@ public class StockController {
 
     @Operation(summary = "Crear stock inicial para un producto nuevo")
     @PostMapping("/initial")
-    @PreAuthorize("hasAnyRole('ADMIN', 'ASISTENTE')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<StockResponse> createInitialStock(@Valid @RequestBody StockRequest request) {
         StockResponse response = stockIn.createInitialStock(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
@@ -54,7 +54,7 @@ public class StockController {
 
     @Operation(summary = "Actualizar stock (ingreso o salida)")
     @PutMapping("/{productId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'ASISTENTE')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<StockResponse> updateStock(
             @PathVariable Long productId,
             @RequestParam Integer quantity,

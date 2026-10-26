@@ -26,6 +26,7 @@ public class ProductoController {
 
     @Operation(summary = "Crear nuevo producto (pez, filtro, alimento, etc.)")
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ProductoResponse> crearProducto(@Valid @RequestBody ProductoRequest request) {
         ProductoResponse response = productoIn.createProducto(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
@@ -33,6 +34,7 @@ public class ProductoController {
 
     @Operation(summary = "Actualizar producto existente")
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ProductoResponse> actualizarProducto(
             @PathVariable Long id,
             @Valid @RequestBody ProductoRequest request) {
@@ -71,6 +73,7 @@ public class ProductoController {
 
     @Operation(summary = "Cambiar estado del producto (ACTIVO/INACTIVO)")
     @PatchMapping("/{id}/estado")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> cambiarEstado(
             @PathVariable Long id,
             @RequestParam String estado) {
@@ -80,6 +83,7 @@ public class ProductoController {
 
     @Operation(summary = "Eliminar producto")
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> eliminarProducto(@PathVariable Long id) {
         productoIn.deleteProducto(id);
         return ResponseEntity.noContent().build();
