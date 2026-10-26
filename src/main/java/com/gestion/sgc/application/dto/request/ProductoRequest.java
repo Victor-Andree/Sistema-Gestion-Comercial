@@ -32,6 +32,10 @@ public class ProductoRequest {
     @NotNull(message = "El tipo de producto es obligatorio")
     private Long tipoProductoId;
 
+    @jakarta.validation.constraints.Pattern(regexp = "ACTIVO|INACTIVO", message = "El estado debe ser ACTIVO o INACTIVO")
     private String estado;
+
+    @PositiveOrZero(message = "El stock inicial no puede ser negativo")
+    private Integer cantidadInicial;
 
 }

@@ -11,6 +11,9 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import org.springframework.web.server.ResponseStatusException;
+import static org.springframework.http.HttpStatus.*;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -26,7 +29,7 @@ public class TipoProductoUseCase implements TipoProductoIn {
     public TipoProductoResponse createTipoProducto(TipoProductoRequest request) {
         // Validar que no exista tipo con el mismo nombre
         if (tipoProductoRepository.existsByNombre(request.getNombre())) {
-            throw new RuntimeException("Ya existe un tipo de producto con el nombre: " + request.getNombre());
+            throw new ResponseStatusException(CONFLICT, "Ya existe un tipo de producto con el nombre: " + request.getNombre());
         }
 
         // Crear tipo de producto
@@ -60,7 +63,7 @@ public class TipoProductoUseCase implements TipoProductoIn {
         if (tipoProductoRepository.existsById(id)) {
             tipoProductoRepository.deleteById(id);
         } else {
-            throw new RuntimeException("Tipo de producto no encontrado con ID: " + id);
+            throw new ResponseStatusException(NOT_FOUND, "Tipo de producto no encontrado con ID: " + id);
         }
     }
 
