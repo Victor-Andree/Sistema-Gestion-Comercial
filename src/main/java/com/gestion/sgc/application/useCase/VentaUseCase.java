@@ -175,6 +175,8 @@ public class VentaUseCase implements VentaIn {
         Venta venta = ventaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Venta no encontrada"));
 
+        validarAcceso(venta);
+
         if (venta.getEstado() != EstadoVenta.PENDIENTE) {
             throw new IllegalStateException("Solo se pueden confirmar ventas pendientes");
         }
@@ -215,7 +217,7 @@ public class VentaUseCase implements VentaIn {
         LocalDateTime inicio = fecha.atStartOfDay();
         LocalDateTime fin = fecha.atTime(LocalTime.MAX);
 
-        return ventaRepository.findByFechaBetween(inicio, fin).stream()
+        return filtrarPorAcceso(ventaRepository.findByFechaBetween(inicio, fin)).stream()
                 .map(venta -> {
                     List<DetalleVenta> detalles = ventaRepository.findDetallesByVentaId(venta.getVentaId());
                     return buildVentaResponse(venta, detalles);
@@ -227,6 +229,7 @@ public class VentaUseCase implements VentaIn {
     @Override
     public Optional<VentaResponse> buscarPorId(Long id) {
         return ventaRepository.findById(id)
+                .filter(this::puedeAcceder)
                 .map(venta -> {
                     List<DetalleVenta> detalles = ventaRepository.findDetallesByVentaId(id);
                     return buildVentaResponse(venta, detalles);
@@ -238,7 +241,7 @@ public class VentaUseCase implements VentaIn {
 
     @Override
     public List<VentaResponse> listarPorCliente(Long clienteId) {
-        return ventaRepository.findByClienteId(clienteId).stream()
+        return filtrarPorAcceso(ventaRepository.findByClienteId(clienteId)).stream()
                 .map(venta -> {
                     List<DetalleVenta> detalles = ventaRepository.findDetallesByVentaId(venta.getVentaId());
                     return buildVentaResponse(venta, detalles);
@@ -248,7 +251,7 @@ public class VentaUseCase implements VentaIn {
 
     @Override
     public List<VentaResponse> listarPorUsuario(Long usuarioId) {
-        return ventaRepository.findByUsuarioId(usuarioId).stream()
+        return filtrarPorAcceso(ventaRepository.findByUsuarioId(usuarioId)).stream()
                 .map(venta -> {
                     List<DetalleVenta> detalles = ventaRepository.findDetallesByVentaId(venta.getVentaId());
                     return buildVentaResponse(venta, detalles);
@@ -258,7 +261,7 @@ public class VentaUseCase implements VentaIn {
 
     @Override
     public List<VentaResponse> listarTodas() {
-        return ventaRepository.findAll().stream()
+        return filtrarPorAcceso(ventaRepository.findAll()).stream()
                 .map(venta -> {
                     List<DetalleVenta> detalles = ventaRepository.findDetallesByVentaId(venta.getVentaId());
                     return buildVentaResponse(venta, detalles);
@@ -271,6 +274,12 @@ public class VentaUseCase implements VentaIn {
     public VentaResponse anularVenta(Long id, String motivo) {
         Venta venta = ventaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Venta no encontrada: " + id));
+
+        validarAcceso(venta);
+
+        if (!esAdmin() && venta.getEstado() != EstadoVenta.PENDIENTE) {
+            throw new IllegalStateException("El asistente solo puede anular ventas pendientes");
+        }
 
         if (venta.getEstado() == EstadoVenta.ANULADA) {
             throw new RuntimeException("La venta ya está anulada");
@@ -315,7 +324,8 @@ public class VentaUseCase implements VentaIn {
     @Transactional
     public List<VentaResponse> listarVentasPendientes() {
 
-        List<Venta> ventas = ventaRepository.findByEstado(EstadoVenta.PENDIENTE);
+        List<Venta> ventas = filtrarPorAcceso(
+                ventaRepository.findByEstado(EstadoVenta.PENDIENTE));
 
         return ventas.stream()
                 .map(venta -> {
@@ -338,7 +348,7 @@ public class VentaUseCase implements VentaIn {
         LocalDateTime inicio = desde.atStartOfDay();
         LocalDateTime fin = hasta.atTime(LocalTime.MAX);
 
-        return ventaRepository.findByFechaBetween(inicio, fin).stream()
+        return filtrarPorAcceso(ventaRepository.findByFechaBetween(inicio, fin)).stream()
                 .map(venta -> {
                     List<DetalleVenta> detalles = ventaRepository.findDetallesByVentaId(venta.getVentaId());
                     return buildVentaResponse(venta, detalles);
@@ -347,6 +357,40 @@ public class VentaUseCase implements VentaIn {
     }
 
     // MÉTODOS PRIVADOS
+
+    private boolean esAdmin() {
+        return SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+    }
+
+    private Usuario usuarioActual() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        return usuarioRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Usuario autenticado no encontrado"));
+    }
+
+    private boolean puedeAcceder(Venta venta) {
+        if (esAdmin()) return true;
+        Long usuarioId = usuarioActual().getUsuarioId();
+        return venta.getUsuario() != null
+                && usuarioId.equals(venta.getUsuario().getUsuarioId());
+    }
+
+    private List<Venta> filtrarPorAcceso(List<Venta> ventas) {
+        if (esAdmin()) return ventas;
+        Long usuarioId = usuarioActual().getUsuarioId();
+        return ventas.stream()
+                .filter(venta -> venta.getUsuario() != null
+                        && usuarioId.equals(venta.getUsuario().getUsuarioId()))
+                .toList();
+    }
+
+    private void validarAcceso(Venta venta) {
+        if (!puedeAcceder(venta)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "No puedes operar una venta registrada por otro usuario");
+        }
+    }
 
     private Comprobante crearComprobante(Venta venta, String tipoComprobante) {
         Comprobante comprobante = new Comprobante();

@@ -20,14 +20,14 @@ import java.util.List;
 @RequestMapping("/api/v1/ventas")
 @RequiredArgsConstructor
 @Tag(name = "Ventas", description = "Endpoints para gestión de ventas")
-@PreAuthorize("hasAnyAuthority('ADMIN', 'ASISTENTE')")
+@PreAuthorize("hasAnyRole('ADMIN', 'ASISTENTE')")
 public class VentaController {
 
     private final VentaIn ventaIn;
 
     @Operation(summary = "Registrar una nueva venta")
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'ASISTENTE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ASISTENTE')")
     public ResponseEntity<VentaResponse> registrarVenta(@Valid @RequestBody VentaRequest request) {
         VentaResponse response = ventaIn.registrarVenta(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
@@ -35,7 +35,7 @@ public class VentaController {
 
     @Operation(summary = "Registrar una venta como PENDIENTE (reserva)")
     @PostMapping("/pendiente")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'ASISTENTE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ASISTENTE')")
     public ResponseEntity<VentaResponse> registrarVentaPendiente(
             @Valid @RequestBody VentaRequest request) {
 
@@ -45,7 +45,7 @@ public class VentaController {
 
     @Operation(summary = "Confirmar una venta pendiente y convertirla en COMPLETADA")
     @PutMapping("/{id}/confirmar")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'ASISTENTE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ASISTENTE')")
     public ResponseEntity<VentaResponse> confirmarVenta(@PathVariable Long id) {
 
         VentaResponse response = ventaIn.confirmarVenta(id);
@@ -54,7 +54,7 @@ public class VentaController {
 
     @Operation(summary = "Listar ventas pendientes (reservas activas)")
     @GetMapping("/pendientes")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'ASISTENTE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ASISTENTE')")
     public ResponseEntity<List<VentaResponse>> listarVentasPendientes() {
         return ResponseEntity.ok(ventaIn.listarVentasPendientes());
     }
@@ -95,7 +95,7 @@ public class VentaController {
 
     @Operation(summary = "Anular una venta")
     @PutMapping("/{id}/anular")
-    @PreAuthorize("hasAuthority('ADMIN')") // Solo ADMIN puede anular
+    @PreAuthorize("hasAnyRole('ADMIN', 'ASISTENTE')")
     public ResponseEntity<VentaResponse> anularVenta(
             @PathVariable Long id,
             @RequestParam String motivo) {

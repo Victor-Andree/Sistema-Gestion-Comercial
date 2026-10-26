@@ -19,7 +19,7 @@ import java.util.List;
 @RequestMapping("/api/v1/clientes")
 @RequiredArgsConstructor
 @Tag(name = "Clientes", description = "Endpoint para gestionar clientes")
-@PreAuthorize("hasAnyAuthority('ADMIN', 'ASISTENTE')")
+@PreAuthorize("hasAnyRole('ADMIN', 'ASISTENTE')")
 public class ClienteController {
 
 

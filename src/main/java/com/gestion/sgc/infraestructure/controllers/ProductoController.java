@@ -19,7 +19,7 @@ import java.util.List;
 @RequestMapping("/api/v1/productos")
 @RequiredArgsConstructor
 @Tag(name = "Productos", description = "Endpoint para gestionar productos")
-@PreAuthorize("hasAnyAuthority('ADMIN', 'ASISTENTE')")
+@PreAuthorize("hasAnyRole('ADMIN', 'ASISTENTE')")
 public class ProductoController {
 
     private final ProductosIn productoIn;
