@@ -64,4 +64,18 @@ class CajaControllerTests {
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.errors.montoInicial").exists());
         verifyNoInteractions(cajas);
     }
+
+    @Test void amountWithMoreThanTwoDecimalsReturns400WithoutUseCaseCall() throws Exception {
+        mvc.perform(post("/api/v1/cajas/1/aperturas").with(user("admin").roles("ADMIN"))
+                        .contentType("application/json").content("{\"montoInicial\":10.001}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.errors.montoInicial").exists());
+        verifyNoInteractions(cajas);
+    }
+
+    @Test void amountOutsideDecimalRangeReturns400WithoutUseCaseCall() throws Exception {
+        mvc.perform(post("/api/v1/cajas/1/aperturas").with(user("admin").roles("ADMIN"))
+                        .contentType("application/json").content("{\"montoInicial\":10000000000000.00}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.errors.montoInicial").exists());
+        verifyNoInteractions(cajas);
+    }
 }

@@ -78,6 +78,22 @@ class CajaUseCaseTests {
     }
 
     @Test
+    void rejectsMoreThanTwoDecimalPlacesBeforePersistence() {
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> useCase.abrir(1L, new BigDecimal("10.001"), "admin"));
+        assertEquals(400, error.getStatusCode().value());
+        verify(cajas, never()).findByIdForUpdate(any());
+    }
+
+    @Test
+    void rejectsAmountOutsideDecimalRangeBeforePersistence() {
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> useCase.abrir(1L, new BigDecimal("10000000000000.00"), "admin"));
+        assertEquals(400, error.getStatusCode().value());
+        verify(cajas, never()).findByIdForUpdate(any());
+    }
+
+    @Test
     void rejectsDuplicateOpening() {
         Caja caja = new Caja(1L, "Principal", true);
         when(cajas.findByIdForUpdate(1L)).thenReturn(Optional.of(caja));

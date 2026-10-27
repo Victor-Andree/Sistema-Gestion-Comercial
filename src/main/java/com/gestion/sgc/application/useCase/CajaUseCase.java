@@ -25,6 +25,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class CajaUseCase implements CajaIn {
+    private static final BigDecimal MAX_MONTO_INICIAL = new BigDecimal("9999999999999.99");
     private final CajaRepositoryPort cajas;
     private final SesionCajaRepositoryPort sesiones;
     private final UsuarioRepositoryPort usuarios;
@@ -44,6 +45,10 @@ public class CajaUseCase implements CajaIn {
         if (montoInicial == null || montoInicial.signum() < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El monto inicial no puede ser negativo");
         }
+        if (montoInicial.scale() > 2 || montoInicial.compareTo(MAX_MONTO_INICIAL) > 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "El monto inicial admite hasta 13 enteros y 2 decimales");
+        }
 
         Caja caja = cajas.findByIdForUpdate(cajaId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Caja no encontrada"));
@@ -57,7 +62,7 @@ public class CajaUseCase implements CajaIn {
         Usuario responsable = usuarios.findByUsername(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario autenticado no encontrado"));
         SesionCaja sesion = new SesionCaja(null, caja, EstadoSesionCaja.ABIERTA,
-                montoInicial.setScale(2, RoundingMode.HALF_UP), LocalDateTime.now(), responsable);
+                montoInicial.setScale(2, RoundingMode.UNNECESSARY), LocalDateTime.now(), responsable);
         try {
             return response(sesiones.save(sesion));
         } catch (DataIntegrityViolationException exception) {
