@@ -90,7 +90,7 @@ public class ReporteExcelService {
         int rowIndex = 1;
         for (ReporteVentasResponse.PuntoVenta punto : reporte.evolucion()) {
             Row row = sheet.createRow(rowIndex++);
-            row.createCell(0).setCellValue(punto.fecha());
+            row.createCell(0).setCellValue(java.sql.Date.valueOf(punto.fecha()));
             row.getCell(0).setCellStyle(estilos.fecha);
             row.createCell(1).setCellValue(punto.cantidadVentas());
             row.createCell(2).setCellValue(punto.ingresos().doubleValue());
@@ -104,7 +104,7 @@ public class ReporteExcelService {
         Row row = sheet.createRow(index);
         row.createCell(0).setCellValue(label);
         row.getCell(0).setCellStyle(estilos.etiqueta);
-        if (value instanceof LocalDate date) row.createCell(1).setCellValue(date);
+        if (value instanceof LocalDate date) row.createCell(1).setCellValue(java.sql.Date.valueOf(date));
         else if (value instanceof BigDecimal decimal) row.createCell(1).setCellValue(decimal.doubleValue());
         else if (value instanceof Number number) row.createCell(1).setCellValue(number.doubleValue());
         else row.createCell(1).setCellValue(String.valueOf(value));
@@ -147,7 +147,7 @@ public class ReporteExcelService {
             etiqueta = workbook.createCellStyle();
             Font labelFont = workbook.createFont(); labelFont.setBold(true); etiqueta.setFont(labelFont);
             fecha = workbook.createCellStyle(); fecha.setDataFormat(workbook.createDataFormat().getFormat("dd/mm/yyyy"));
-            moneda = workbook.createCellStyle(); moneda.setDataFormat(workbook.createDataFormat().getFormat("S/ #,##0.00"));
+            moneda = workbook.createCellStyle(); moneda.setDataFormat(workbook.createDataFormat().getFormat("\"S/ \"#,##0.00"));
             entero = workbook.createCellStyle(); entero.setDataFormat(workbook.createDataFormat().getFormat("0"));
         }
     }
