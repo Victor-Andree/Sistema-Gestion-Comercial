@@ -3,7 +3,6 @@ package com.gestion.sgc.application.services;
 import com.gestion.sgc.application.dto.response.ReporteVentasResponse;
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.CellStyle;
-import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.IndexedColors;
@@ -11,6 +10,9 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.VerticalAlignment;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFCellStyle;
+import org.apache.poi.xssf.usermodel.extensions.XSSFCellFill;
+import org.openxmlformats.schemas.spreadsheetml.x2006.main.STPatternType;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -126,8 +128,7 @@ public class ReporteExcelService {
 
         Estilos(XSSFWorkbook workbook) {
             titulo = workbook.createCellStyle();
-            titulo.setFillForegroundColor(IndexedColors.DARK_GREEN.getIndex());
-            titulo.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            aplicarRelleno(workbook, titulo, IndexedColors.DARK_GREEN);
             titulo.setAlignment(HorizontalAlignment.CENTER);
             titulo.setVerticalAlignment(VerticalAlignment.CENTER);
             Font titleFont = workbook.createFont();
@@ -139,8 +140,7 @@ public class ReporteExcelService {
             seccion.setAlignment(HorizontalAlignment.LEFT);
 
             encabezado = workbook.createCellStyle();
-            encabezado.setFillForegroundColor(IndexedColors.LIGHT_GREEN.getIndex());
-            encabezado.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            aplicarRelleno(workbook, encabezado, IndexedColors.LIGHT_GREEN);
             encabezado.setBorderBottom(BorderStyle.THIN);
             Font headerFont = workbook.createFont(); headerFont.setBold(true); encabezado.setFont(headerFont);
 
@@ -149,6 +149,16 @@ public class ReporteExcelService {
             fecha = workbook.createCellStyle(); fecha.setDataFormat(workbook.createDataFormat().getFormat("dd/mm/yyyy"));
             moneda = workbook.createCellStyle(); moneda.setDataFormat(workbook.createDataFormat().getFormat("\"S/ \"#,##0.00"));
             entero = workbook.createCellStyle(); entero.setDataFormat(workbook.createDataFormat().getFormat("0"));
+        }
+
+        private static void aplicarRelleno(XSSFWorkbook workbook, CellStyle style, IndexedColors color) {
+            XSSFCellFill fill = new XSSFCellFill();
+            fill.setPatternType(STPatternType.SOLID);
+            fill.setFillForegroundColor(color.getIndex());
+            int fillId = workbook.getStylesSource().putFill(fill);
+            XSSFCellStyle xssfStyle = (XSSFCellStyle) style;
+            xssfStyle.getCoreXf().setFillId(fillId);
+            xssfStyle.getCoreXf().setApplyFill(true);
         }
     }
 }
