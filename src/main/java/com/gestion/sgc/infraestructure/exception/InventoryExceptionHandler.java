@@ -4,6 +4,7 @@ import com.gestion.sgc.infraestructure.controllers.ProductoController;
 import com.gestion.sgc.infraestructure.controllers.ClienteController;
 import com.gestion.sgc.infraestructure.controllers.StockController;
 import com.gestion.sgc.infraestructure.controllers.TipoProductoController;
+import com.gestion.sgc.infraestructure.controllers.CajaController;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -15,7 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-@RestControllerAdvice(assignableTypes = {ClienteController.class, ProductoController.class, StockController.class, TipoProductoController.class})
+@RestControllerAdvice(assignableTypes = {ClienteController.class, ProductoController.class, StockController.class, TipoProductoController.class, CajaController.class})
 public class InventoryExceptionHandler {
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<?> businessError(ResponseStatusException ex) {
