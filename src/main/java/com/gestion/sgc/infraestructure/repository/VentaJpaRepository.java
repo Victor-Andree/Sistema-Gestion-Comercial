@@ -3,6 +3,7 @@ package com.gestion.sgc.infraestructure.repository;
 import com.gestion.sgc.domain.aggregates.constans.EstadoVenta;
 import com.gestion.sgc.infraestructure.entity.VentaEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -18,6 +19,12 @@ public interface VentaJpaRepository extends JpaRepository<VentaEntity, Long> {
     List<VentaEntity> findByUsuarioUsuarioId(Long usuarioId);
 
     List<VentaEntity> findByEstado(EstadoVenta estado);
+
+    @EntityGraph(attributePaths = {"detalles", "detalles.producto"})
+    @Query("SELECT DISTINCT v FROM VentaEntity v WHERE v.estado = 'COMPLETADA' " +
+            "AND v.fechaVenta >= :inicio AND v.fechaVenta < :fin ORDER BY v.fechaVenta")
+    List<VentaEntity> findCompletedForReport(@Param("inicio") LocalDateTime inicio,
+                                              @Param("fin") LocalDateTime fin);
 
 
     List<VentaEntity> findByClienteClienteIdAndFechaVentaBetween(
