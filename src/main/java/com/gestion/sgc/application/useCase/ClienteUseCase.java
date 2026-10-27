@@ -13,6 +13,8 @@ import com.gestion.sgc.infraestructure.mapper.PersonaMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,16 +35,19 @@ public class ClienteUseCase implements ClienteIn {
     public ClienteResponse createCliente(ClienteRequest request) {
         // 1. Validar que no exista persona con mismo DNI
         if (personaRepository.existsByDni(request.getDni())) {
-            throw new RuntimeException("Ya existe una persona con el DNI: " + request.getDni());
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Ya existe una persona con el DNI: " + request.getDni());
         }
 
         // 2. Validar que no exista persona con mismo correo
         if (personaRepository.existsByCorreo(request.getCorreo())) {
-            throw new RuntimeException("Ya existe una persona con el correo: " + request.getCorreo());
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Ya existe una persona con el correo: " + request.getCorreo());
         }
 
         if (clienteRepository.existsByDni(request.getDni())) {
-            throw new RuntimeException("Ya existe un cliente con el DNI: " + request.getDni());
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Ya existe un cliente con el DNI: " + request.getDni());
         }
 
         Persona persona = personaMapper.toDomainFromClienteRequest(request);
