@@ -2,6 +2,7 @@ package com.gestion.sgc.infraestructure.controllers;
 
 import com.gestion.sgc.application.dto.response.ReporteVentasResponse;
 import com.gestion.sgc.application.services.ReporteVentasService;
+import com.gestion.sgc.application.services.ReporteExcelService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -20,8 +21,12 @@ import java.time.LocalDate;
 @PreAuthorize("hasRole('ADMIN')")
 public class ReporteController {
     private final ReporteVentasService reporteService;
+    private final ReporteExcelService excelService;
 
-    public ReporteController(ReporteVentasService reporteService) { this.reporteService = reporteService; }
+    public ReporteController(ReporteVentasService reporteService, ReporteExcelService excelService) {
+        this.reporteService = reporteService;
+        this.excelService = excelService;
+    }
 
     @GetMapping("/ventas")
     public ReporteVentasResponse ventas(
@@ -40,5 +45,17 @@ public class ReporteController {
                         "attachment; filename=ventas-" + desde + "-" + hasta + ".csv")
                 .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
                 .body(contenido);
+    }
+
+    @GetMapping(value = "/ventas.xlsx", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    public ResponseEntity<byte[]> exportarExcel(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=ventas-" + desde + "-" + hasta + ".xlsx")
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excelService.exportar(desde, hasta));
     }
 }
