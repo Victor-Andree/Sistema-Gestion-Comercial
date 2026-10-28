@@ -50,6 +50,7 @@ public interface VentaMapper {
     @Mapping(target = "cliente", ignore = true)
     @Mapping(target = "detalles", ignore = true)
     @Mapping(target = "comprobante", ignore = true)
+    @Mapping(target = "metodoPago", ignore = true)
     Venta toDomainFromRequest(VentaRequest request);
 
 

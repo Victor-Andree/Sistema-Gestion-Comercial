@@ -49,6 +49,7 @@ public class VentaRepositoryAdapter implements VentaRepositoryPort {
             // actualizar solo campos modificables
             entity.setEstado(venta.getEstado());
             entity.setTotal(venta.getTotal());
+            entity.setMetodoPago(venta.getMetodoPago());
 
             // 🔥 SI HAY COMPROBANTE Y AÚN NO EXISTE EN ENTITY
             if (venta.getComprobante() != null && entity.getComprobante() == null) {
@@ -94,6 +95,12 @@ public class VentaRepositoryAdapter implements VentaRepositoryPort {
     @Override
     public Optional<Venta> findById(Long id) {
         return ventaJpaRepository.findById(id)
+                .map(ventaMapper::toDomainFromEntity);
+    }
+
+    @Override
+    public Optional<Venta> findByIdForUpdate(Long id) {
+        return ventaJpaRepository.findByIdForUpdate(id)
                 .map(ventaMapper::toDomainFromEntity);
     }
 
@@ -164,7 +171,15 @@ public class VentaRepositoryAdapter implements VentaRepositoryPort {
     @Override
     public Comprobante saveComprobante(Comprobante comprobante) {
 
-        ComprobanteEntity entity = comprobanteMapper.toEntity(comprobante);
+        ComprobanteEntity entity = comprobante.getComprobanteId() == null
+                ? comprobanteMapper.toEntity(comprobante)
+                : comprobanteJpaRepository.findById(comprobante.getComprobanteId())
+                .orElseThrow(() -> new RuntimeException("Comprobante no encontrado"));
+
+        entity.setTipo(comprobante.getTipo());
+        entity.setCorrelativo(comprobante.getCorrelativo());
+        entity.setEstado(comprobante.getEstado());
+        entity.setFechaEmision(comprobante.getFechaEmision());
 
         if (comprobante.getVenta() != null) {
             VentaEntity ventaRef = new VentaEntity();

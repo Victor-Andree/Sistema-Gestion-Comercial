@@ -5,6 +5,7 @@ import com.gestion.sgc.application.dto.response.MovimientoCajaResponse;
 import com.gestion.sgc.application.dto.response.ResumenCajaResponse;
 import com.gestion.sgc.domain.aggregates.constans.EstadoSesionCaja;
 import com.gestion.sgc.domain.aggregates.constans.TipoMovimientoCaja;
+import com.gestion.sgc.domain.aggregates.constans.OrigenMovimientoCaja;
 import com.gestion.sgc.domain.aggregates.model.MovimientoCaja;
 import com.gestion.sgc.domain.aggregates.model.SesionCaja;
 import com.gestion.sgc.domain.aggregates.model.Usuario;
@@ -72,7 +73,7 @@ public class MovimientoCajaUseCase implements MovimientoCajaIn {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
                         "Usuario autenticado no encontrado"));
         MovimientoCaja movimiento = new MovimientoCaja(null, key, sesion, request.tipo(), monto, concepto,
-                LocalDateTime.now(), responsable);
+                LocalDateTime.now(), responsable, OrigenMovimientoCaja.MANUAL, null, null);
         return response(movimientos.save(movimiento));
     }
 
@@ -133,6 +134,7 @@ public class MovimientoCajaUseCase implements MovimientoCajaIn {
                 movimiento.getSesionCaja().getSesionCajaId(), movimiento.getTipo().name(),
                 movimiento.getMonto(), movimiento.getConcepto(), movimiento.getFechaMovimiento(),
                 movimiento.getUsuarioResponsable().getUsuarioId(),
-                movimiento.getUsuarioResponsable().getUsername());
+                movimiento.getUsuarioResponsable().getUsername(), movimiento.getOrigen().name(),
+                movimiento.getVentaId(), movimiento.getMovimientoOriginalId());
     }
 }

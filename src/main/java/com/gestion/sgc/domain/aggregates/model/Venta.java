@@ -1,6 +1,7 @@
 package com.gestion.sgc.domain.aggregates.model;
 
 import com.gestion.sgc.domain.aggregates.constans.EstadoVenta;
+import com.gestion.sgc.domain.aggregates.constans.MetodoPago;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -20,5 +21,6 @@ public class Venta {
     private EstadoVenta estado;
     private List<DetalleVenta> detalles;
     private Comprobante comprobante;
+    private MetodoPago metodoPago;
 
 }

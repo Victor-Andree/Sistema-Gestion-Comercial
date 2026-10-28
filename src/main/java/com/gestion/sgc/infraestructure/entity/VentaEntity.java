@@ -1,6 +1,7 @@
 package com.gestion.sgc.infraestructure.entity;
 
 import com.gestion.sgc.domain.aggregates.constans.EstadoVenta;
+import com.gestion.sgc.domain.aggregates.constans.MetodoPago;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -36,6 +37,10 @@ public class VentaEntity {
 
     @Enumerated(EnumType.STRING)
     private EstadoVenta estado;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "metodo_pago", nullable = false, length = 20)
+    private MetodoPago metodoPago = MetodoPago.NO_REGISTRADO;
 
     @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<DetalleVentaEntity> detalles;

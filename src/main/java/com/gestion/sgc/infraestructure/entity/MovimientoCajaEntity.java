@@ -1,6 +1,7 @@
 package com.gestion.sgc.infraestructure.entity;
 
 import com.gestion.sgc.domain.aggregates.constans.TipoMovimientoCaja;
+import com.gestion.sgc.domain.aggregates.constans.OrigenMovimientoCaja;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -53,4 +54,14 @@ public class MovimientoCajaEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "usuario_responsable_id", nullable = false)
     private UsuarioEntity usuarioResponsable;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private OrigenMovimientoCaja origen = OrigenMovimientoCaja.MANUAL;
+
+    @Column(name = "venta_id")
+    private Long ventaId;
+
+    @Column(name = "movimiento_original_id")
+    private Long movimientoOriginalId;
 }

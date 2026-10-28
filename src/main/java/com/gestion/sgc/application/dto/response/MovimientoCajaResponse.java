@@ -11,5 +11,8 @@ public record MovimientoCajaResponse(
         String concepto,
         LocalDateTime fechaMovimiento,
         Long usuarioResponsableId,
-        String usuarioResponsable
+        String usuarioResponsable,
+        String origen,
+        Long ventaId,
+        Long movimientoOriginalId
 ) {}

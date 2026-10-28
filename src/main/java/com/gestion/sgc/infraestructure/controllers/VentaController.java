@@ -1,6 +1,7 @@
 package com.gestion.sgc.infraestructure.controllers;
 
 import com.gestion.sgc.application.dto.request.VentaRequest;
+import com.gestion.sgc.application.dto.request.CobroVentaRequest;
 import com.gestion.sgc.application.dto.response.VentaResponse;
 import com.gestion.sgc.domain.ports.inputs.VentaIn;
 import io.swagger.v3.oas.annotations.Operation;
@@ -46,9 +47,10 @@ public class VentaController {
     @Operation(summary = "Confirmar una venta pendiente y convertirla en COMPLETADA")
     @PutMapping("/{id}/confirmar")
     @PreAuthorize("hasAnyRole('ADMIN', 'ASISTENTE')")
-    public ResponseEntity<VentaResponse> confirmarVenta(@PathVariable Long id) {
+    public ResponseEntity<VentaResponse> confirmarVenta(@PathVariable Long id,
+                                                         @Valid @RequestBody CobroVentaRequest cobro) {
 
-        VentaResponse response = ventaIn.confirmarVenta(id);
+        VentaResponse response = ventaIn.confirmarVenta(id, cobro);
         return ResponseEntity.ok(response);
     }
 
