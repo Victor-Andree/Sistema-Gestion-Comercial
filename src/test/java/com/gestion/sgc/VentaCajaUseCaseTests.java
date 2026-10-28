@@ -39,13 +39,14 @@ class VentaCajaUseCaseTests {
     ComprobanteMapper comprobanteMapper = mock(ComprobanteMapper.class);
     MovimientoCajaRepositoryPort movimientos = mock(MovimientoCajaRepositoryPort.class);
     SesionCajaRepositoryPort sesiones = mock(SesionCajaRepositoryPort.class);
+    DevolucionCajaPendienteRepositoryPort devoluciones = mock(DevolucionCajaPendienteRepositoryPort.class);
     VentaUseCase useCase;
     Usuario admin;
     SesionCaja sesion;
 
     @BeforeEach void setUp() {
         useCase = new VentaUseCase(ventas, productos, clientes, usuarios, stocks, ventaMapper,
-                detalleMapper, comprobanteMapper, movimientos, sesiones);
+                detalleMapper, comprobanteMapper, movimientos, sesiones, devoluciones);
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
                 "admin", "n/a", List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
         admin = new Usuario(); admin.setUsuarioId(1L); admin.setUsername("admin");
@@ -121,8 +122,26 @@ class VentaCajaUseCaseTests {
         completed.setEstado(EstadoVenta.COMPLETADA); completed.setMetodoPago(MetodoPago.EFECTIVO);
         when(ventas.findByIdForUpdate(10L)).thenReturn(Optional.of(completed));
         when(ventas.findDetallesByVentaId(10L)).thenReturn(List.of());
+        MovimientoCaja original = new MovimientoCaja(50L, "venta-10-cobro", sesion,
+                TipoMovimientoCaja.INGRESO, new BigDecimal("50.00"), "Cobro", LocalDateTime.now(),
+                admin, OrigenMovimientoCaja.VENTA, 10L, null);
+        when(movimientos.findByIdempotencyKey("venta-10-cobro")).thenReturn(Optional.of(original));
         useCase.confirmarVenta(10L, new CobroVentaRequest(MetodoPago.EFECTIVO, 1L));
         verify(movimientos, never()).save(any());
+    }
+
+    @Test void repeatedConfirmationWithDifferentCashRegisterIsRejected() {
+        Venta completed = new Venta(); completed.setVentaId(10L); completed.setUsuario(admin);
+        completed.setEstado(EstadoVenta.COMPLETADA); completed.setMetodoPago(MetodoPago.EFECTIVO);
+        MovimientoCaja original = new MovimientoCaja(50L, "venta-10-cobro", sesion,
+                TipoMovimientoCaja.INGRESO, new BigDecimal("50.00"), "Cobro", LocalDateTime.now(),
+                admin, OrigenMovimientoCaja.VENTA, 10L, null);
+        when(ventas.findByIdForUpdate(10L)).thenReturn(Optional.of(completed));
+        when(movimientos.findByIdempotencyKey("venta-10-cobro")).thenReturn(Optional.of(original));
+
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> useCase.confirmarVenta(10L, new CobroVentaRequest(MetodoPago.EFECTIVO, 99L)));
+        assertEquals(409, error.getStatusCode().value());
     }
 
     @Test void cancellingCashSaleCreatesCompensation() {
@@ -142,5 +161,54 @@ class VentaCajaUseCaseTests {
 
         verify(movimientos).save(argThat(m -> m.getTipo() == TipoMovimientoCaja.EGRESO
                 && m.getMovimientoOriginalId().equals(50L) && m.getVentaId().equals(10L)));
+    }
+
+    @Test void closedOriginalSessionUsesCurrentSessionOfSameRegister() {
+        SesionCaja closed = new SesionCaja(2L, sesion.getCaja(), EstadoSesionCaja.CERRADA,
+                new BigDecimal("100.00"), LocalDateTime.now().minusHours(2), admin);
+        SesionCaja current = new SesionCaja(3L, sesion.getCaja(), EstadoSesionCaja.ABIERTA,
+                new BigDecimal("100.00"), LocalDateTime.now(), admin);
+        Venta completed = new Venta(); completed.setVentaId(10L); completed.setUsuario(admin);
+        completed.setEstado(EstadoVenta.COMPLETADA); completed.setMetodoPago(MetodoPago.EFECTIVO);
+        MovimientoCaja income = new MovimientoCaja(50L, "venta-10-cobro", closed,
+                TipoMovimientoCaja.INGRESO, new BigDecimal("50.00"), "Cobro", LocalDateTime.now(),
+                admin, OrigenMovimientoCaja.VENTA, 10L, null);
+        when(ventas.findByIdForUpdate(10L)).thenReturn(Optional.of(completed));
+        when(ventas.findDetallesByVentaId(10L)).thenReturn(List.of());
+        when(movimientos.findByIdempotencyKey("venta-10-cobro")).thenReturn(Optional.of(income));
+        when(movimientos.findByIdempotencyKey("venta-10-anulacion")).thenReturn(Optional.empty());
+        when(sesiones.findByIdForUpdate(2L)).thenReturn(Optional.of(closed));
+        when(sesiones.findOpenByCajaId(1L)).thenReturn(Optional.of(current));
+        when(sesiones.findByIdForUpdate(3L)).thenReturn(Optional.of(current));
+        when(movimientos.sumBySesionIdAndTipo(3L, TipoMovimientoCaja.INGRESO)).thenReturn(BigDecimal.ZERO);
+        when(movimientos.sumBySesionIdAndTipo(3L, TipoMovimientoCaja.EGRESO)).thenReturn(BigDecimal.ZERO);
+
+        useCase.anularVenta(10L, "Devolución posterior");
+
+        verify(movimientos).save(argThat(m -> m.getSesionCaja().getSesionCajaId().equals(3L)
+                && m.getTipo() == TipoMovimientoCaja.EGRESO));
+    }
+
+    @Test void closedSessionWithoutCurrentRegisterCreatesPendingRefund() {
+        SesionCaja closed = new SesionCaja(2L, sesion.getCaja(), EstadoSesionCaja.CERRADA,
+                new BigDecimal("100.00"), LocalDateTime.now().minusHours(2), admin);
+        Venta completed = new Venta(); completed.setVentaId(10L); completed.setUsuario(admin);
+        completed.setEstado(EstadoVenta.COMPLETADA); completed.setMetodoPago(MetodoPago.EFECTIVO);
+        MovimientoCaja income = new MovimientoCaja(50L, "venta-10-cobro", closed,
+                TipoMovimientoCaja.INGRESO, new BigDecimal("50.00"), "Cobro", LocalDateTime.now(),
+                admin, OrigenMovimientoCaja.VENTA, 10L, null);
+        when(ventas.findByIdForUpdate(10L)).thenReturn(Optional.of(completed));
+        when(ventas.findDetallesByVentaId(10L)).thenReturn(List.of());
+        when(movimientos.findByIdempotencyKey("venta-10-cobro")).thenReturn(Optional.of(income));
+        when(movimientos.findByIdempotencyKey("venta-10-anulacion")).thenReturn(Optional.empty());
+        when(sesiones.findByIdForUpdate(2L)).thenReturn(Optional.of(closed));
+        when(sesiones.findOpenByCajaId(1L)).thenReturn(Optional.empty());
+        when(devoluciones.findByVentaId(10L)).thenReturn(Optional.empty());
+
+        useCase.anularVenta(10L, "Devolución pendiente");
+
+        verify(devoluciones).save(argThat(d -> d.getEstado() == EstadoDevolucionCaja.PENDIENTE
+                && d.getVentaId().equals(10L) && d.getMovimientoCobroId().equals(50L)));
+        verify(movimientos, never()).save(argThat(m -> m.getTipo() == TipoMovimientoCaja.EGRESO));
     }
 }

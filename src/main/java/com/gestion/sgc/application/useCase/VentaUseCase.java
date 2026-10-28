@@ -11,6 +11,7 @@ import com.gestion.sgc.domain.aggregates.constans.MetodoPago;
 import com.gestion.sgc.domain.aggregates.constans.OrigenMovimientoCaja;
 import com.gestion.sgc.domain.aggregates.constans.TipoMovimientoCaja;
 import com.gestion.sgc.domain.aggregates.constans.EstadoSesionCaja;
+import com.gestion.sgc.domain.aggregates.constans.EstadoDevolucionCaja;
 import com.gestion.sgc.domain.aggregates.model.*;
 import com.gestion.sgc.domain.ports.inputs.VentaIn;
 import com.gestion.sgc.domain.ports.outputs.ClienteRepositoryPort;
@@ -19,6 +20,7 @@ import com.gestion.sgc.domain.ports.outputs.StockRepositoryPort;
 import com.gestion.sgc.domain.ports.outputs.VentaRepositoryPort;
 import com.gestion.sgc.domain.ports.outputs.MovimientoCajaRepositoryPort;
 import com.gestion.sgc.domain.ports.outputs.SesionCajaRepositoryPort;
+import com.gestion.sgc.domain.ports.outputs.DevolucionCajaPendienteRepositoryPort;
 import com.gestion.sgc.domain.ports.outputs.auth.UsuarioRepositoryPort;
 import com.gestion.sgc.infraestructure.mapper.ComprobanteMapper;
 import com.gestion.sgc.infraestructure.mapper.DetalleVentaMapper;
@@ -55,6 +57,7 @@ public class VentaUseCase implements VentaIn {
     private final ComprobanteMapper comprobanteMapper;
     private final MovimientoCajaRepositoryPort movimientoCajaRepository;
     private final SesionCajaRepositoryPort sesionCajaRepository;
+    private final DevolucionCajaPendienteRepositoryPort devolucionCajaRepository;
 
     @Override
     @Transactional
@@ -79,7 +82,7 @@ public class VentaUseCase implements VentaIn {
         venta.setEstado(EstadoVenta.COMPLETADA);
         venta.setMetodoPago(request.getMetodoPago());
 
-        double totalVenta = 0.0;
+        BigDecimal totalVenta = BigDecimal.ZERO.setScale(2);
         List<DetalleVenta> detalles = new ArrayList<>();
 
         // 4. Procesar detalles
@@ -98,8 +101,10 @@ public class VentaUseCase implements VentaIn {
             }
 
             // Calcular subtotal
-            double subtotal = producto.getPrecioVenta() * detalleReq.getCantidad();
-            totalVenta += subtotal;
+            BigDecimal subtotalMonetario = importe(producto.getPrecioVenta())
+                    .multiply(BigDecimal.valueOf(detalleReq.getCantidad())).setScale(2, RoundingMode.HALF_UP);
+            double subtotal = subtotalMonetario.doubleValue();
+            totalVenta = totalVenta.add(subtotalMonetario);
 
             // Crear detalle
             DetalleVenta detalle = new DetalleVenta();
@@ -118,7 +123,7 @@ public class VentaUseCase implements VentaIn {
         }
 
         // 5. Asignar total y detalles
-        venta.setTotal(totalVenta);
+        venta.setTotal(totalVenta.doubleValue());
         venta.setDetalles(detalles);
 
         // 6. Guardar TODO en cascada
@@ -155,7 +160,7 @@ public class VentaUseCase implements VentaIn {
         venta.setEstado(EstadoVenta.PENDIENTE);
         venta.setMetodoPago(MetodoPago.NO_REGISTRADO);
 
-        double totalVenta = 0.0;
+        BigDecimal totalVenta = BigDecimal.ZERO.setScale(2);
         List<DetalleVenta> detalles = new ArrayList<>();
 
         for (DetalleVentaRequest detalleReq : request.getDetalles()) {
@@ -164,8 +169,10 @@ public class VentaUseCase implements VentaIn {
                     .orElseThrow(() -> new RuntimeException(
                             "Producto no encontrado: " + detalleReq.getProductoId()));
 
-            double subtotal = producto.getPrecioVenta() * detalleReq.getCantidad();
-            totalVenta += subtotal;
+            BigDecimal subtotalMonetario = importe(producto.getPrecioVenta())
+                    .multiply(BigDecimal.valueOf(detalleReq.getCantidad())).setScale(2, RoundingMode.HALF_UP);
+            double subtotal = subtotalMonetario.doubleValue();
+            totalVenta = totalVenta.add(subtotalMonetario);
 
             DetalleVenta detalle = new DetalleVenta();
             detalle.setVenta(venta);
@@ -177,7 +184,7 @@ public class VentaUseCase implements VentaIn {
             detalles.add(detalle);
         }
 
-        venta.setTotal(totalVenta);
+        venta.setTotal(totalVenta.doubleValue());
         venta.setDetalles(detalles);
 
         Venta ventaGuardada = ventaRepository.save(venta);
@@ -197,9 +204,9 @@ public class VentaUseCase implements VentaIn {
 
         validarAcceso(venta);
 
-        if (venta.getEstado() == EstadoVenta.COMPLETADA && venta.getMetodoPago() == cobro.metodoPago()) {
-            List<DetalleVenta> existentes = ventaRepository.findDetallesByVentaId(id);
-            return buildVentaResponse(venta, existentes);
+        if (venta.getEstado() == EstadoVenta.COMPLETADA) {
+            validarReintentoConfirmacion(venta, cobro);
+            return buildVentaResponse(venta, ventaRepository.findDetallesByVentaId(id));
         }
         if (venta.getEstado() != EstadoVenta.PENDIENTE) {
             throw new IllegalStateException("Solo se pueden confirmar ventas pendientes");
@@ -308,7 +315,7 @@ public class VentaUseCase implements VentaIn {
         }
 
         if (venta.getEstado() == EstadoVenta.ANULADA) {
-            throw new RuntimeException("La venta ya está anulada");
+            return buildVentaResponse(venta, ventaRepository.findDetallesByVentaId(id));
         }
 
         List<DetalleVenta> detalles = ventaRepository.findDetallesByVentaId(id);
@@ -428,6 +435,34 @@ public class VentaUseCase implements VentaIn {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Debes seleccionar una caja para cobrar en efectivo");
         }
+        if (metodoPago != MetodoPago.EFECTIVO && cajaId != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "La caja solo debe enviarse para pagos en efectivo");
+        }
+    }
+
+    private void validarReintentoConfirmacion(Venta venta, CobroVentaRequest cobro) {
+        if (venta.getMetodoPago() != cobro.metodoPago()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La venta ya fue confirmada con otro método de pago");
+        }
+        if (venta.getMetodoPago() != MetodoPago.EFECTIVO) return;
+
+        MovimientoCaja original = movimientoCajaRepository
+                .findByIdempotencyKey("venta-" + venta.getVentaId() + "-cobro")
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
+                        "La venta figura completada, pero su cobro en caja no existe"));
+        boolean coincide = original.getOrigen() == OrigenMovimientoCaja.VENTA
+                && original.getTipo() == TipoMovimientoCaja.INGRESO
+                && venta.getVentaId().equals(original.getVentaId())
+                && original.getSesionCaja() != null
+                && original.getSesionCaja().getCaja() != null
+                && cobro.cajaId() != null
+                && cobro.cajaId().equals(original.getSesionCaja().getCaja().getCajaId());
+        if (!coincide) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "El reintento no corresponde al cobro y caja originales");
+        }
     }
 
     private void registrarIngresoVentaSiCorresponde(Venta venta, Long cajaId, Usuario responsable) {
@@ -446,7 +481,7 @@ public class VentaUseCase implements VentaIn {
         String key = "venta-" + venta.getVentaId() + "-cobro";
         if (movimientoCajaRepository.findByIdempotencyKey(key).isPresent()) return;
 
-        BigDecimal monto = BigDecimal.valueOf(venta.getTotal()).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal monto = importe(venta.getTotal());
         MovimientoCaja movimiento = new MovimientoCaja(null, key, sesion, TipoMovimientoCaja.INGRESO,
                 monto, "Cobro en efectivo de venta #" + venta.getVentaId(), LocalDateTime.now(),
                 responsable, OrigenMovimientoCaja.VENTA, venta.getVentaId(), null);
@@ -460,16 +495,25 @@ public class VentaUseCase implements VentaIn {
         MovimientoCaja cobro = movimientoCajaRepository.findByIdempotencyKey(cobroKey)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
                         "No se encontró el cobro en caja de la venta"));
-        SesionCaja sesion = sesionCajaRepository.findByIdForUpdate(cobro.getSesionCaja().getSesionCajaId())
+        SesionCaja sesionOriginal = sesionCajaRepository.findByIdForUpdate(cobro.getSesionCaja().getSesionCajaId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
                         "La sesión del cobro no está disponible"));
-        if (sesion.getEstado() != EstadoSesionCaja.ABIERTA) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "No se puede compensar el cobro porque la sesión de caja está cerrada");
-        }
 
         String compensationKey = "venta-" + venta.getVentaId() + "-anulacion";
         if (movimientoCajaRepository.findByIdempotencyKey(compensationKey).isPresent()) return;
+
+        SesionCaja sesion = sesionOriginal;
+        if (sesionOriginal.getEstado() != EstadoSesionCaja.ABIERTA) {
+            Optional<SesionCaja> actual = sesionCajaRepository
+                    .findOpenByCajaId(sesionOriginal.getCaja().getCajaId());
+            if (actual.isEmpty()) {
+                registrarDevolucionPendiente(venta, cobro, sesionOriginal.getCaja().getCajaId());
+                return;
+            }
+            sesion = sesionCajaRepository.findByIdForUpdate(actual.get().getSesionCajaId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
+                            "La sesión actual de caja ya no está disponible"));
+        }
 
         BigDecimal ingresos = movimientoCajaRepository.sumBySesionIdAndTipo(
                 sesion.getSesionCajaId(), TipoMovimientoCaja.INGRESO);
@@ -479,8 +523,8 @@ public class VentaUseCase implements VentaIn {
                 .add(ingresos == null ? BigDecimal.ZERO : ingresos)
                 .subtract(egresos == null ? BigDecimal.ZERO : egresos);
         if (saldo.compareTo(cobro.getMonto()) < 0) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Saldo insuficiente para devolver el cobro de la venta");
+            registrarDevolucionPendiente(venta, cobro, sesion.getCaja().getCajaId());
+            return;
         }
 
         MovimientoCaja compensacion = new MovimientoCaja(null, compensationKey, sesion,
@@ -488,6 +532,18 @@ public class VentaUseCase implements VentaIn {
                 "Anulación de cobro de venta #" + venta.getVentaId(), LocalDateTime.now(), responsable,
                 OrigenMovimientoCaja.VENTA, venta.getVentaId(), cobro.getMovimientoCajaId());
         movimientoCajaRepository.save(compensacion);
+    }
+
+    private void registrarDevolucionPendiente(Venta venta, MovimientoCaja cobro, Long cajaId) {
+        if (devolucionCajaRepository.findByVentaId(venta.getVentaId()).isPresent()) return;
+        devolucionCajaRepository.save(new DevolucionCajaPendiente(null, venta.getVentaId(), cajaId,
+                cobro.getMovimientoCajaId(), cobro.getMonto(), EstadoDevolucionCaja.PENDIENTE,
+                LocalDateTime.now(), null));
+    }
+
+    private BigDecimal importe(Double value) {
+        if (value == null) throw new ResponseStatusException(HttpStatus.CONFLICT, "Importe de venta inválido");
+        return BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP);
     }
 
     private Comprobante crearComprobante(Venta venta, String tipoComprobante) {
