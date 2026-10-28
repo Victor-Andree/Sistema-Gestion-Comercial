@@ -205,10 +205,43 @@ class VentaCajaUseCaseTests {
         when(sesiones.findOpenByCajaId(1L)).thenReturn(Optional.empty());
         when(devoluciones.findByVentaId(10L)).thenReturn(Optional.empty());
 
-        useCase.anularVenta(10L, "Devolución pendiente");
+        DevolucionCajaPendiente pending = new DevolucionCajaPendiente(1L, 10L, 1L, 50L,
+                new BigDecimal("50.00"), EstadoDevolucionCaja.PENDIENTE, LocalDateTime.now(), null);
+        when(devoluciones.save(any())).thenReturn(pending);
+        when(devoluciones.findByVentaId(10L)).thenReturn(Optional.empty(), Optional.of(pending));
+
+        VentaResponse response = useCase.anularVenta(10L, "Devolución pendiente");
 
         verify(devoluciones).save(argThat(d -> d.getEstado() == EstadoDevolucionCaja.PENDIENTE
                 && d.getVentaId().equals(10L) && d.getMovimientoCobroId().equals(50L)));
+        verify(movimientos, never()).save(argThat(m -> m.getTipo() == TipoMovimientoCaja.EGRESO));
+        assertEquals("PENDIENTE", response.getEstadoDevolucionCaja());
+    }
+
+    @Test void insufficientCurrentSessionBalanceCreatesPendingRefundWithoutEgress() {
+        SesionCaja closed = new SesionCaja(2L, sesion.getCaja(), EstadoSesionCaja.CERRADA,
+                new BigDecimal("100.00"), LocalDateTime.now().minusHours(2), admin);
+        SesionCaja current = new SesionCaja(3L, sesion.getCaja(), EstadoSesionCaja.ABIERTA,
+                new BigDecimal("5.00"), LocalDateTime.now(), admin);
+        Venta completed = new Venta(); completed.setVentaId(10L); completed.setUsuario(admin);
+        completed.setEstado(EstadoVenta.COMPLETADA); completed.setMetodoPago(MetodoPago.EFECTIVO);
+        MovimientoCaja income = new MovimientoCaja(50L, "venta-10-cobro", closed,
+                TipoMovimientoCaja.INGRESO, new BigDecimal("50.00"), "Cobro", LocalDateTime.now(),
+                admin, OrigenMovimientoCaja.VENTA, 10L, null);
+        when(ventas.findByIdForUpdate(10L)).thenReturn(Optional.of(completed));
+        when(ventas.findDetallesByVentaId(10L)).thenReturn(List.of());
+        when(movimientos.findByIdempotencyKey("venta-10-cobro")).thenReturn(Optional.of(income));
+        when(movimientos.findByIdempotencyKey("venta-10-anulacion")).thenReturn(Optional.empty());
+        when(sesiones.findByIdForUpdate(2L)).thenReturn(Optional.of(closed));
+        when(sesiones.findOpenByCajaId(1L)).thenReturn(Optional.of(current));
+        when(sesiones.findByIdForUpdate(3L)).thenReturn(Optional.of(current));
+        when(movimientos.sumBySesionIdAndTipo(3L, TipoMovimientoCaja.INGRESO)).thenReturn(BigDecimal.ZERO);
+        when(movimientos.sumBySesionIdAndTipo(3L, TipoMovimientoCaja.EGRESO)).thenReturn(BigDecimal.ZERO);
+        when(devoluciones.findByVentaId(10L)).thenReturn(Optional.empty());
+
+        useCase.anularVenta(10L, "Saldo insuficiente");
+
+        verify(devoluciones).save(argThat(d -> d.getEstado() == EstadoDevolucionCaja.PENDIENTE));
         verify(movimientos, never()).save(argThat(m -> m.getTipo() == TipoMovimientoCaja.EGRESO));
     }
 }

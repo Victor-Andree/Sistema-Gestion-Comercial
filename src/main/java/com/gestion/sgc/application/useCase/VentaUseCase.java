@@ -587,6 +587,16 @@ public class VentaUseCase implements VentaIn {
 
         response.setDetalles(detalleVentaMapper.toResponseList(detalles));
 
+        if (venta.getEstado() == EstadoVenta.ANULADA && venta.getMetodoPago() == MetodoPago.EFECTIVO) {
+            devolucionCajaRepository.findByVentaId(venta.getVentaId())
+                    .ifPresent(devolucion -> response.setEstadoDevolucionCaja(devolucion.getEstado().name()));
+            if (response.getEstadoDevolucionCaja() == null
+                    && movimientoCajaRepository.findByIdempotencyKey(
+                    "venta-" + venta.getVentaId() + "-anulacion").isPresent()) {
+                response.setEstadoDevolucionCaja(EstadoDevolucionCaja.APLICADA.name());
+            }
+        }
+
             ventaRepository.findComprobanteByVentaId(venta.getVentaId())
                 .ifPresent(comp ->
                         response.setComprobante(comprobanteMapper.toResponse(comp))

@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
+import java.util.List;
+import com.gestion.sgc.domain.aggregates.constans.EstadoDevolucionCaja;
 
 @Component
 @RequiredArgsConstructor
@@ -23,6 +25,12 @@ public class DevolucionCajaPendienteRepositoryAdapter implements DevolucionCajaP
     @Override
     public Optional<DevolucionCajaPendiente> findByVentaId(Long ventaId) {
         return repository.findByVentaId(ventaId).map(this::toDomain);
+    }
+
+    @Override
+    public List<DevolucionCajaPendiente> findAllPending() {
+        return repository.findAllByEstadoOrderByFechaRegistroAsc(EstadoDevolucionCaja.PENDIENTE)
+                .stream().map(this::toDomain).toList();
     }
 
     private DevolucionCajaPendienteEntity toEntity(DevolucionCajaPendiente value) {
