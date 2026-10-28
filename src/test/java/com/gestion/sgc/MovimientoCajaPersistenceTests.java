@@ -40,6 +40,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -88,7 +89,8 @@ class MovimientoCajaPersistenceTests {
             start.await();
             try {
                 useCase.registrar(sessionId, new MovimientoCajaRequest(TipoMovimientoCaja.EGRESO,
-                        new BigDecimal("70.00"), "Egreso concurrente"), "admin-movimientos");
+                        new BigDecimal("70.00"), "Egreso concurrente"), "admin-movimientos",
+                        UUID.randomUUID().toString());
                 return 201;
             } catch (ResponseStatusException exception) {
                 return exception.getStatusCode().value();
@@ -114,7 +116,7 @@ class MovimientoCajaPersistenceTests {
         doThrow(new IllegalStateException("Fallo simulado")).when(movementPort).save(any());
         assertThrows(IllegalStateException.class, () -> useCase.registrar(sessionId,
                 new MovimientoCajaRequest(TipoMovimientoCaja.INGRESO, new BigDecimal("10.00"), "Ingreso"),
-                "admin-movimientos"));
+                "admin-movimientos", UUID.randomUUID().toString()));
         assertEquals(0, movimientos.count());
     }
 }

@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class MovimientoCaja {
     private Long movimientoCajaId;
+    private String idempotencyKey;
     private SesionCaja sesionCaja;
     private TipoMovimientoCaja tipo;
     private BigDecimal monto;

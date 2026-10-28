@@ -47,6 +47,7 @@ class MovimientoCajaControllerTests {
         mvc.perform(get("/api/v1/cajas/sesiones/1/resumen").with(user("assistant").roles("ASISTENTE")))
                 .andExpect(status().isOk());
         mvc.perform(post("/api/v1/cajas/sesiones/1/movimientos").with(user("assistant").roles("ASISTENTE"))
+                        .header("Idempotency-Key", "11111111-1111-1111-1111-111111111111")
                         .contentType("application/json")
                         .content("{\"tipo\":\"INGRESO\",\"monto\":10,\"concepto\":\"Fondo\"}"))
                 .andExpect(status().isForbidden());
@@ -54,18 +55,29 @@ class MovimientoCajaControllerTests {
 
     @Test void adminCanWriteAndUsernameComesFromAuthentication() throws Exception {
         mvc.perform(post("/api/v1/cajas/sesiones/1/movimientos").with(user("admin-real").roles("ADMIN"))
+                        .header("Idempotency-Key", "11111111-1111-1111-1111-111111111111")
                         .contentType("application/json")
                         .content("{\"tipo\":\"EGRESO\",\"monto\":10.50,\"concepto\":\"Compra\"}"))
                 .andExpect(status().isCreated());
         verify(movements).registrar(org.mockito.ArgumentMatchers.eq(1L),
                 argThat(request -> request.monto().equals(new BigDecimal("10.50")) && request.concepto().equals("Compra")),
-                org.mockito.ArgumentMatchers.eq("admin-real"));
+                org.mockito.ArgumentMatchers.eq("admin-real"),
+                org.mockito.ArgumentMatchers.eq("11111111-1111-1111-1111-111111111111"));
     }
 
     @Test void invalidBodyReturns400WithoutUseCase() throws Exception {
         mvc.perform(post("/api/v1/cajas/sesiones/1/movimientos").with(user("admin").roles("ADMIN"))
+                        .header("Idempotency-Key", "11111111-1111-1111-1111-111111111111")
                         .contentType("application/json")
                         .content("{\"tipo\":\"INGRESO\",\"monto\":0,\"concepto\":\"\"}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(movements);
+    }
+
+    @Test void missingIdempotencyKeyReturns400WithoutUseCase() throws Exception {
+        mvc.perform(post("/api/v1/cajas/sesiones/1/movimientos").with(user("admin").roles("ADMIN"))
+                        .contentType("application/json")
+                        .content("{\"tipo\":\"INGRESO\",\"monto\":10,\"concepto\":\"Fondo\"}"))
                 .andExpect(status().isBadRequest());
         verifyNoInteractions(movements);
     }

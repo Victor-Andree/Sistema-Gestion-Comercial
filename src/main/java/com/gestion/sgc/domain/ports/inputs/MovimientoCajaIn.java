@@ -7,7 +7,8 @@ import com.gestion.sgc.application.dto.response.ResumenCajaResponse;
 import java.util.List;
 
 public interface MovimientoCajaIn {
-    MovimientoCajaResponse registrar(Long sesionId, MovimientoCajaRequest request, String username);
+    MovimientoCajaResponse registrar(Long sesionId, MovimientoCajaRequest request, String username,
+                                      String idempotencyKey);
     List<MovimientoCajaResponse> listar(Long sesionId);
     ResumenCajaResponse resumen(Long sesionId);
 }

@@ -30,6 +30,9 @@ public class MovimientoCajaEntity {
     @Column(name = "movimiento_caja_id")
     private Long movimientoCajaId;
 
+    @Column(name = "idempotency_key", nullable = false, unique = true, length = 64)
+    private String idempotencyKey;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "sesion_caja_id", nullable = false)
     private SesionCajaEntity sesionCaja;

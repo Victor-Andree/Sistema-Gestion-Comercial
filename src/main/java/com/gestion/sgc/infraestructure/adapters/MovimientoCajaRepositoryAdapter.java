@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -20,6 +21,11 @@ public class MovimientoCajaRepositoryAdapter implements MovimientoCajaRepository
     @Override
     public MovimientoCaja save(MovimientoCaja movimiento) {
         return mapper.toDomain(repository.saveAndFlush(mapper.toEntity(movimiento)));
+    }
+
+    @Override
+    public Optional<MovimientoCaja> findByIdempotencyKey(String idempotencyKey) {
+        return repository.findByIdempotencyKey(idempotencyKey).map(mapper::toDomain);
     }
 
     @Override

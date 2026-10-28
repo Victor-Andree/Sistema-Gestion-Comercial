@@ -22,6 +22,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -34,8 +35,10 @@ public class MovimientoCajaUseCase implements MovimientoCajaIn {
 
     @Override
     @Transactional
-    public MovimientoCajaResponse registrar(Long sesionId, MovimientoCajaRequest request, String username) {
+    public MovimientoCajaResponse registrar(Long sesionId, MovimientoCajaRequest request, String username,
+                                             String idempotencyKey) {
         validarMonto(request.monto());
+        String key = validarIdempotencyKey(idempotencyKey);
         String concepto = request.concepto() == null ? "" : request.concepto().trim();
         if (concepto.isEmpty() || concepto.length() > 200) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -44,11 +47,23 @@ public class MovimientoCajaUseCase implements MovimientoCajaIn {
 
         SesionCaja sesion = sesiones.findByIdForUpdate(sesionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Sesión de caja no encontrada"));
+        BigDecimal monto = request.monto().setScale(2, RoundingMode.UNNECESSARY);
+        var existente = movimientos.findByIdempotencyKey(key);
+        if (existente.isPresent()) {
+            MovimientoCaja movimiento = existente.get();
+            if (!movimiento.getSesionCaja().getSesionCajaId().equals(sesionId)
+                    || movimiento.getTipo() != request.tipo()
+                    || movimiento.getMonto().compareTo(monto) != 0
+                    || !movimiento.getConcepto().equals(concepto)
+                    || !movimiento.getUsuarioResponsable().getUsername().equals(username)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "La clave de idempotencia ya fue utilizada con otra operación");
+            }
+            return response(movimiento);
+        }
         if (sesion.getEstado() != EstadoSesionCaja.ABIERTA) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "La sesión de caja está cerrada");
         }
-
-        BigDecimal monto = request.monto().setScale(2, RoundingMode.UNNECESSARY);
         if (request.tipo() == TipoMovimientoCaja.EGRESO && saldo(sesion).compareTo(monto) < 0) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Saldo insuficiente para registrar el egreso");
         }
@@ -56,9 +71,18 @@ public class MovimientoCajaUseCase implements MovimientoCajaIn {
         Usuario responsable = usuarios.findByUsername(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
                         "Usuario autenticado no encontrado"));
-        MovimientoCaja movimiento = new MovimientoCaja(null, sesion, request.tipo(), monto, concepto,
+        MovimientoCaja movimiento = new MovimientoCaja(null, key, sesion, request.tipo(), monto, concepto,
                 LocalDateTime.now(), responsable);
         return response(movimientos.save(movimiento));
+    }
+
+    private String validarIdempotencyKey(String value) {
+        try {
+            return UUID.fromString(value == null ? "" : value.trim()).toString();
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Idempotency-Key debe ser un UUID válido");
+        }
     }
 
     @Override

@@ -9,8 +9,12 @@ import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 public interface MovimientoCajaJpaRepository extends JpaRepository<MovimientoCajaEntity, Long> {
+    @EntityGraph(attributePaths = {"sesionCaja", "usuarioResponsable"})
+    Optional<MovimientoCajaEntity> findByIdempotencyKey(String idempotencyKey);
+
     @EntityGraph(attributePaths = {"sesionCaja", "usuarioResponsable"})
     List<MovimientoCajaEntity> findAllBySesionCajaSesionCajaIdOrderByFechaMovimientoDesc(Long sesionId);
 

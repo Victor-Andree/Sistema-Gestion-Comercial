@@ -29,6 +29,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class MovimientoCajaUseCaseTests {
+    private static final String KEY = "11111111-1111-1111-1111-111111111111";
     SesionCajaRepositoryPort sesiones;
     MovimientoCajaRepositoryPort movimientos;
     UsuarioRepositoryPort usuarios;
@@ -52,6 +53,7 @@ class MovimientoCajaUseCaseTests {
         when(sesiones.findByIdForUpdate(5L)).thenReturn(Optional.of(sesion(EstadoSesionCaja.ABIERTA, "100.00")));
         when(usuarios.findByUsername("admin")).thenReturn(Optional.of(user));
         when(movimientos.sumBySesionIdAndTipo(any(), any())).thenReturn(new BigDecimal("0.00"));
+        when(movimientos.findByIdempotencyKey(any())).thenReturn(Optional.empty());
         when(movimientos.save(any())).thenAnswer(invocation -> {
             MovimientoCaja value = invocation.getArgument(0); value.setMovimientoCajaId(11L); return value;
         });
@@ -61,7 +63,7 @@ class MovimientoCajaUseCaseTests {
         prepareOpenSession();
         var result = useCase.registrar(5L,
                 new MovimientoCajaRequest(TipoMovimientoCaja.INGRESO, new BigDecimal("25.50"), "  Fondo extra  "),
-                "admin");
+                "admin", KEY);
         assertEquals("INGRESO", result.tipo());
         assertEquals(new BigDecimal("25.50"), result.monto());
         assertEquals("Fondo extra", result.concepto());
@@ -72,35 +74,35 @@ class MovimientoCajaUseCaseTests {
         prepareOpenSession();
         assertEquals("EGRESO", useCase.registrar(5L,
                 new MovimientoCajaRequest(TipoMovimientoCaja.EGRESO, new BigDecimal("80.00"), "Compra"),
-                "admin").tipo());
+                "admin", KEY).tipo());
     }
 
     @Test void rejectsInvalidAmountsBeforeLocking() {
         for (String amount : List.of("0", "-1", "1.001", "10000000000000.00")) {
             assertEquals(400, assertThrows(ResponseStatusException.class, () -> useCase.registrar(5L,
                     new MovimientoCajaRequest(TipoMovimientoCaja.INGRESO, new BigDecimal(amount), "Concepto"),
-                    "admin")).getStatusCode().value());
+                    "admin", KEY)).getStatusCode().value());
         }
         verify(sesiones, never()).findByIdForUpdate(any());
     }
 
     @Test void rejectsBlankAndLongConcept() {
         assertEquals(400, assertThrows(ResponseStatusException.class, () -> useCase.registrar(5L,
-                new MovimientoCajaRequest(TipoMovimientoCaja.INGRESO, BigDecimal.ONE, "   "), "admin"))
+                new MovimientoCajaRequest(TipoMovimientoCaja.INGRESO, BigDecimal.ONE, "   "), "admin", KEY))
                 .getStatusCode().value());
         assertEquals(400, assertThrows(ResponseStatusException.class, () -> useCase.registrar(5L,
-                new MovimientoCajaRequest(TipoMovimientoCaja.INGRESO, BigDecimal.ONE, "x".repeat(201)), "admin"))
+                new MovimientoCajaRequest(TipoMovimientoCaja.INGRESO, BigDecimal.ONE, "x".repeat(201)), "admin", KEY))
                 .getStatusCode().value());
     }
 
     @Test void rejectsMissingAndClosedSessions() {
         when(sesiones.findByIdForUpdate(5L)).thenReturn(Optional.empty());
         assertEquals(404, assertThrows(ResponseStatusException.class, () -> useCase.registrar(5L,
-                new MovimientoCajaRequest(TipoMovimientoCaja.INGRESO, BigDecimal.ONE, "Concepto"), "admin"))
+                new MovimientoCajaRequest(TipoMovimientoCaja.INGRESO, BigDecimal.ONE, "Concepto"), "admin", KEY))
                 .getStatusCode().value());
         when(sesiones.findByIdForUpdate(5L)).thenReturn(Optional.of(sesion(EstadoSesionCaja.CERRADA, "10.00")));
         assertEquals(409, assertThrows(ResponseStatusException.class, () -> useCase.registrar(5L,
-                new MovimientoCajaRequest(TipoMovimientoCaja.INGRESO, BigDecimal.ONE, "Concepto"), "admin"))
+                new MovimientoCajaRequest(TipoMovimientoCaja.INGRESO, BigDecimal.ONE, "Concepto"), "admin", KEY))
                 .getStatusCode().value());
     }
 
@@ -109,7 +111,7 @@ class MovimientoCajaUseCaseTests {
         when(movimientos.sumBySesionIdAndTipo(5L, TipoMovimientoCaja.INGRESO)).thenReturn(new BigDecimal("10.00"));
         when(movimientos.sumBySesionIdAndTipo(5L, TipoMovimientoCaja.EGRESO)).thenReturn(new BigDecimal("20.00"));
         assertEquals(409, assertThrows(ResponseStatusException.class, () -> useCase.registrar(5L,
-                new MovimientoCajaRequest(TipoMovimientoCaja.EGRESO, new BigDecimal("91.00"), "Compra"), "admin"))
+                new MovimientoCajaRequest(TipoMovimientoCaja.EGRESO, new BigDecimal("91.00"), "Compra"), "admin", KEY))
                 .getStatusCode().value());
         verify(movimientos, never()).save(any());
     }
@@ -120,5 +122,28 @@ class MovimientoCajaUseCaseTests {
         when(movimientos.sumBySesionIdAndTipo(5L, TipoMovimientoCaja.EGRESO)).thenReturn(new BigDecimal("15.00"));
         var result = useCase.resumen(5L);
         assertEquals(new BigDecimal("115.00"), result.saldoProvisional());
+    }
+
+    @Test void repeatedIdempotencyKeyReturnsOriginalMovement() {
+        prepareOpenSession();
+        MovimientoCaja original = new MovimientoCaja(11L, KEY, sesion(EstadoSesionCaja.ABIERTA, "100.00"),
+                TipoMovimientoCaja.INGRESO, new BigDecimal("25.50"), "Fondo extra",
+                LocalDateTime.now(), new Usuario());
+        original.getUsuarioResponsable().setUsuarioId(9L);
+        original.getUsuarioResponsable().setUsername("admin");
+        when(movimientos.findByIdempotencyKey(KEY)).thenReturn(Optional.of(original));
+
+        var result = useCase.registrar(5L,
+                new MovimientoCajaRequest(TipoMovimientoCaja.INGRESO, new BigDecimal("25.50"), "Fondo extra"),
+                "admin", KEY);
+
+        assertEquals(11L, result.movimientoCajaId());
+        verify(movimientos, never()).save(any());
+    }
+
+    @Test void rejectsInvalidIdempotencyKey() {
+        assertEquals(400, assertThrows(ResponseStatusException.class, () -> useCase.registrar(5L,
+                new MovimientoCajaRequest(TipoMovimientoCaja.INGRESO, BigDecimal.ONE, "Concepto"),
+                "admin", "not-a-uuid")).getStatusCode().value());
     }
 }
