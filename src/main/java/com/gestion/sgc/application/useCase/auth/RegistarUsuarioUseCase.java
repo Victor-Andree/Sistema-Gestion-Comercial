@@ -13,6 +13,9 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+import com.gestion.sgc.domain.aggregates.constans.RolEnum;
 
 import java.time.LocalDateTime;
 
@@ -31,15 +34,22 @@ public class RegistarUsuarioUseCase implements RegistrarUsuarioIn {
     public UsuarioResponse registrar(RegistrarUsuarioRequest request) {
 
         if (personaRepository.existsByDni(request.getDni())) {
-            throw new RuntimeException("Ya existe una persona con el DNI: " + request.getDni());
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe una persona con el DNI indicado");
         }
 
         if (personaRepository.existsByCorreo(request.getCorreo())) {
-            throw new RuntimeException("Ya existe una persona con el correo: " + request.getCorreo());
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe una persona con el correo indicado");
         }
 
         if (usuarioRepository.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("El username '" + request.getUsername() + "' ya está en uso");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El username ya está en uso");
+        }
+
+        String rol;
+        try {
+            rol = RolEnum.valueOf(request.getRol().trim().toUpperCase()).name();
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El rol debe ser ADMIN o ASISTENTE");
         }
 
         Persona persona = personaMapper.toDomainFromRegistroRequest(request);
@@ -50,7 +60,7 @@ public class RegistarUsuarioUseCase implements RegistrarUsuarioIn {
         usuario.setUsername(request.getUsername());
         usuario.setPassword(passwordEncoder.encode(request.getPassword()));
         usuario.setEstadoUsuario("ACTIVO");
-        usuario.setRol(request.getRol());
+        usuario.setRol(rol);
         usuario.setFechaRegistro(LocalDateTime.now());
 
         Usuario usuarioGuardado = usuarioRepository.save(usuario);

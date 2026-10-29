@@ -65,7 +65,9 @@ public class JwtTokenValidatorFilter extends OncePerRequestFilter {
 
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-            if (jwtService.validateToken(jwt, userDetails)) {
+            if (jwtService.validateToken(jwt, userDetails)
+                    && userDetails.isEnabled()
+                    && userDetails.isAccountNonLocked()) {
                 SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
 
                 UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());

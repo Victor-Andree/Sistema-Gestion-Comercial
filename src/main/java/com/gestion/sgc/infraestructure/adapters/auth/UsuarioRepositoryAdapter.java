@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -41,6 +42,16 @@ public class UsuarioRepositoryAdapter implements UsuarioRepositoryPort {
     @Override
     public boolean existsByUsername(String username) {
         return jpaRepository.existsByUsername(username);
+    }
+
+    @Override
+    public boolean existsByUsernameAndIdNot(String username, Long id) {
+        return jpaRepository.existsByUsernameAndUsuarioIdNot(username, id);
+    }
+
+    @Override
+    public List<Usuario> findAll() {
+        return jpaRepository.findAll().stream().map(usuarioMapper::toDomainFromEntity).toList();
     }
 
 
