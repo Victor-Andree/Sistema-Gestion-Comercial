@@ -1,6 +1,7 @@
 package com.gestion.sgc.domain.aggregates.model;
 
 import com.gestion.sgc.domain.aggregates.constans.TipoMovimientoCaja;
+import com.gestion.sgc.domain.aggregates.constans.OrigenMovimientoCaja;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,4 +23,7 @@ public class MovimientoCaja {
     private String concepto;
     private LocalDateTime fechaMovimiento;
     private Usuario usuarioResponsable;
+    private OrigenMovimientoCaja origen;
+    private Long ventaId;
+    private Long movimientoOriginalId;
 }

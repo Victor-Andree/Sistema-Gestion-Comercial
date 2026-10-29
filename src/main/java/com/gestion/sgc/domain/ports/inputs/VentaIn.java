@@ -1,6 +1,7 @@
 package com.gestion.sgc.domain.ports.inputs;
 
 import com.gestion.sgc.application.dto.request.VentaRequest;
+import com.gestion.sgc.application.dto.request.CobroVentaRequest;
 import com.gestion.sgc.application.dto.response.VentaResponse;
 
 import java.time.LocalDate;
@@ -29,7 +30,7 @@ public interface VentaIn {
 
     VentaResponse registrarVentaPendiente(VentaRequest request);
 
-    VentaResponse confirmarVenta(Long id);
+    VentaResponse confirmarVenta(Long id, CobroVentaRequest cobro);
 
     List<VentaResponse> listarVentasPendientes();
 

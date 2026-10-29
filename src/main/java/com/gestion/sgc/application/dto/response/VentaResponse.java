@@ -22,5 +22,7 @@ public class VentaResponse {
     private String estado;
     private ComprobanteResponse comprobante;
     private List<DetalleVentaResponse> detalles;
+    private String metodoPago;
+    private String estadoDevolucionCaja;
 
 }

@@ -4,6 +4,7 @@ import com.gestion.sgc.application.dto.request.MovimientoCajaRequest;
 import com.gestion.sgc.application.useCase.MovimientoCajaUseCase;
 import com.gestion.sgc.domain.aggregates.constans.EstadoSesionCaja;
 import com.gestion.sgc.domain.aggregates.constans.TipoMovimientoCaja;
+import com.gestion.sgc.domain.aggregates.constans.OrigenMovimientoCaja;
 import com.gestion.sgc.domain.aggregates.model.Caja;
 import com.gestion.sgc.domain.aggregates.model.MovimientoCaja;
 import com.gestion.sgc.domain.aggregates.model.SesionCaja;
@@ -128,7 +129,7 @@ class MovimientoCajaUseCaseTests {
         prepareOpenSession();
         MovimientoCaja original = new MovimientoCaja(11L, KEY, sesion(EstadoSesionCaja.ABIERTA, "100.00"),
                 TipoMovimientoCaja.INGRESO, new BigDecimal("25.50"), "Fondo extra",
-                LocalDateTime.now(), new Usuario());
+                LocalDateTime.now(), new Usuario(), OrigenMovimientoCaja.MANUAL, null, null);
         original.getUsuarioResponsable().setUsuarioId(9L);
         original.getUsuarioResponsable().setUsername("admin");
         when(movimientos.findByIdempotencyKey(KEY)).thenReturn(Optional.of(original));

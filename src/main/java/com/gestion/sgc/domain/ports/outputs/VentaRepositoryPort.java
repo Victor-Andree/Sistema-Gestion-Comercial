@@ -13,6 +13,7 @@ public interface VentaRepositoryPort {
 
     Venta save(Venta venta);
     Optional<Venta> findById(Long id);
+    Optional<Venta> findByIdForUpdate(Long id);
     List<Venta> findAll();
     List<Venta> findByFechaBetween(LocalDateTime inicio, LocalDateTime fin);
     List<Venta> findByClienteId(Long clienteId);

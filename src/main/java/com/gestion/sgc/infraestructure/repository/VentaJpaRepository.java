@@ -6,11 +6,17 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 public interface VentaJpaRepository extends JpaRepository<VentaEntity, Long> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select v from VentaEntity v where v.ventaId = :id")
+    java.util.Optional<VentaEntity> findByIdForUpdate(@Param("id") Long id);
 
     List<VentaEntity> findByFechaVentaBetween(LocalDateTime inicio, LocalDateTime fin);
 

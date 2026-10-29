@@ -1,5 +1,6 @@
 package com.gestion.sgc.application.dto.request;
 
+import com.gestion.sgc.domain.aggregates.constans.MetodoPago;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -23,5 +24,9 @@ public class VentaRequest {
     private String tipoComprobante;
 
     private String observacion;
+
+    private MetodoPago metodoPago;
+
+    private Long cajaId;
 
 }

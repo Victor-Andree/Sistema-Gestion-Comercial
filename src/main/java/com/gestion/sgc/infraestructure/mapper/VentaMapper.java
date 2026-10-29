@@ -38,6 +38,7 @@ public interface VentaMapper {
     @Mapping(target = "clienteId", source = "cliente.clienteId")
     @Mapping(target = "clienteNombre", source = "cliente.persona.nombre")
     @Mapping(target = "estado", source = "estado")
+    @Mapping(target = "estadoDevolucionCaja", ignore = true)
     VentaResponse toResponse(Venta venta);
 
     List<VentaResponse> toResponseList(List<Venta> ventas);
@@ -50,6 +51,7 @@ public interface VentaMapper {
     @Mapping(target = "cliente", ignore = true)
     @Mapping(target = "detalles", ignore = true)
     @Mapping(target = "comprobante", ignore = true)
+    @Mapping(target = "metodoPago", ignore = true)
     Venta toDomainFromRequest(VentaRequest request);
 
 
