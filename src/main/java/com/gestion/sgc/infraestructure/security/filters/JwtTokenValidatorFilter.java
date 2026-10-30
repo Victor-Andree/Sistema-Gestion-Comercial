@@ -60,12 +60,13 @@ public class JwtTokenValidatorFilter extends OncePerRequestFilter {
             return;
         }
         username = jwtService.extractUserName(jwt);
-        System.out.println("En jwt filter");
         if(Objects.nonNull(username) && SecurityContextHolder.getContext().getAuthentication()==null) {
 
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-            if (jwtService.validateToken(jwt, userDetails)) {
+            if (jwtService.validateToken(jwt, userDetails)
+                    && userDetails.isEnabled()
+                    && userDetails.isAccountNonLocked()) {
                 SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
 
                 UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
@@ -88,7 +89,7 @@ public class JwtTokenValidatorFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.startsWith("/api/v1/authentication/") ||
+        return path.equals("/api/v1/authentication/login") ||
                 path.startsWith("/swagger-ui") ||
                 path.startsWith("/v3/api-docs");
     }

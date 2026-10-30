@@ -23,9 +23,13 @@ public interface UsuarioMapper {
     @Mapping(source = "persona.personaId", target = "personaId")
     @Mapping(source = "persona.nombre", target = "nombre")
     @Mapping(source = "persona.apellidos", target = "apellidos")
+    @Mapping(source = "persona.dni", target = "dni")
+    @Mapping(source = "persona.correo", target = "correo")
+    @Mapping(source = "persona.telefono", target = "telefono")
     @Mapping(source = "usuario.username", target = "username")
     @Mapping(source = "usuario.rol", target = "rol")
     @Mapping(source = "usuario.estadoUsuario", target = "estado")
+    @Mapping(source = "usuario.fechaRegistro", target = "fechaRegistro")
     UsuarioResponse toResponse(Usuario usuario, Persona persona);
 
 

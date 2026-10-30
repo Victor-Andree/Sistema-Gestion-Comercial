@@ -1,5 +1,6 @@
 package com.gestion.sgc.infraestructure.security.services.impl;
 
+import com.gestion.sgc.domain.aggregates.constans.EstadoUsuario;
 import com.gestion.sgc.domain.ports.outputs.auth.UsuarioRepositoryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.User;
@@ -21,10 +22,13 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         var usuario = usuarioRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + username));
 
+        boolean activo = EstadoUsuario.ACTIVO.name().equals(usuario.getEstadoUsuario());
+        boolean noBloqueado = !EstadoUsuario.BLOQUEADO.name().equals(usuario.getEstadoUsuario());
+
         return new User(
                 usuario.getUsername(),
                 usuario.getPassword(),
-                true, true, true, true,
+                activo, true, true, noBloqueado,
                 Set.of(new SimpleGrantedAuthority("ROLE_" + usuario.getRol()))
         );
     }

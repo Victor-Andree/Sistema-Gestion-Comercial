@@ -1,6 +1,8 @@
 package com.gestion.sgc.infraestructure.adapters.auth;
 
 import com.gestion.sgc.domain.aggregates.model.Usuario;
+import com.gestion.sgc.domain.aggregates.constans.EstadoUsuario;
+import com.gestion.sgc.domain.aggregates.constans.RolEnum;
 import com.gestion.sgc.domain.ports.outputs.auth.UsuarioRepositoryPort;
 import com.gestion.sgc.infraestructure.entity.UsuarioEntity;
 import com.gestion.sgc.infraestructure.mapper.UsuarioMapper;
@@ -9,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -41,6 +44,23 @@ public class UsuarioRepositoryAdapter implements UsuarioRepositoryPort {
     @Override
     public boolean existsByUsername(String username) {
         return jpaRepository.existsByUsername(username);
+    }
+
+    @Override
+    public boolean existsByUsernameAndIdNot(String username, Long id) {
+        return jpaRepository.existsByUsernameAndUsuarioIdNot(username, id);
+    }
+
+    @Override
+    public List<Usuario> findAll() {
+        return jpaRepository.findAll().stream().map(usuarioMapper::toDomainFromEntity).toList();
+    }
+
+    @Override
+    public List<Usuario> lockActiveAdmins() {
+        return jpaRepository.lockByRolAndEstado(RolEnum.ADMIN, EstadoUsuario.ACTIVO).stream()
+                .map(usuarioMapper::toDomainFromEntity)
+                .toList();
     }
 
 
