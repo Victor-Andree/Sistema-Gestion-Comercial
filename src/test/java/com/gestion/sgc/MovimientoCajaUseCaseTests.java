@@ -2,6 +2,7 @@ package com.gestion.sgc;
 
 import com.gestion.sgc.application.dto.request.MovimientoCajaRequest;
 import com.gestion.sgc.application.useCase.MovimientoCajaUseCase;
+import com.gestion.sgc.application.useCase.SaldoCajaCalculator;
 import com.gestion.sgc.domain.aggregates.constans.EstadoSesionCaja;
 import com.gestion.sgc.domain.aggregates.constans.TipoMovimientoCaja;
 import com.gestion.sgc.domain.aggregates.constans.OrigenMovimientoCaja;
@@ -41,7 +42,7 @@ class MovimientoCajaUseCaseTests {
         sesiones = mock(SesionCajaRepositoryPort.class);
         movimientos = mock(MovimientoCajaRepositoryPort.class);
         usuarios = mock(UsuarioRepositoryPort.class);
-        useCase = new MovimientoCajaUseCase(sesiones, movimientos, usuarios);
+        useCase = new MovimientoCajaUseCase(sesiones, movimientos, usuarios, new SaldoCajaCalculator(movimientos));
     }
 
     private SesionCaja sesion(EstadoSesionCaja estado, String monto) {

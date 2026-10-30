@@ -11,5 +11,12 @@ public record SesionCajaResponse(
         BigDecimal montoInicial,
         LocalDateTime fechaApertura,
         Long usuarioAperturaId,
-        String usuarioApertura
+        String usuarioApertura,
+        BigDecimal saldoEsperado,
+        BigDecimal montoContado,
+        BigDecimal diferencia,
+        LocalDateTime fechaCierre,
+        Long usuarioCierreId,
+        String usuarioCierre,
+        String observacionCierre
 ) {}

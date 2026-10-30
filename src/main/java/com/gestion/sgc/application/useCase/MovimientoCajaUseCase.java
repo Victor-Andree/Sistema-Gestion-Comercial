@@ -33,6 +33,7 @@ public class MovimientoCajaUseCase implements MovimientoCajaIn {
     private final SesionCajaRepositoryPort sesiones;
     private final MovimientoCajaRepositoryPort movimientos;
     private final UsuarioRepositoryPort usuarios;
+    private final SaldoCajaCalculator saldoCalculator;
 
     @Override
     @Transactional
@@ -65,7 +66,7 @@ public class MovimientoCajaUseCase implements MovimientoCajaIn {
         if (sesion.getEstado() != EstadoSesionCaja.ABIERTA) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "La sesión de caja está cerrada");
         }
-        if (request.tipo() == TipoMovimientoCaja.EGRESO && saldo(sesion).compareTo(monto) < 0) {
+        if (request.tipo() == TipoMovimientoCaja.EGRESO && saldoCalculator.saldo(sesion).compareTo(monto) < 0) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Saldo insuficiente para registrar el egreso");
         }
 
@@ -97,26 +98,12 @@ public class MovimientoCajaUseCase implements MovimientoCajaIn {
     @Transactional(readOnly = true)
     public ResumenCajaResponse resumen(Long sesionId) {
         SesionCaja sesion = obtenerSesion(sesionId);
-        BigDecimal ingresos = total(sesionId, TipoMovimientoCaja.INGRESO);
-        BigDecimal egresos = total(sesionId, TipoMovimientoCaja.EGRESO);
-        return new ResumenCajaResponse(sesionId, sesion.getMontoInicial(), ingresos, egresos,
-                sesion.getMontoInicial().add(ingresos).subtract(egresos));
+        return saldoCalculator.resumen(sesion);
     }
 
     private SesionCaja obtenerSesion(Long sesionId) {
         return sesiones.findById(sesionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Sesión de caja no encontrada"));
-    }
-
-    private BigDecimal saldo(SesionCaja sesion) {
-        return sesion.getMontoInicial()
-                .add(total(sesion.getSesionCajaId(), TipoMovimientoCaja.INGRESO))
-                .subtract(total(sesion.getSesionCajaId(), TipoMovimientoCaja.EGRESO));
-    }
-
-    private BigDecimal total(Long sesionId, TipoMovimientoCaja tipo) {
-        BigDecimal total = movimientos.sumBySesionIdAndTipo(sesionId, tipo);
-        return (total == null ? BigDecimal.ZERO : total).setScale(2, RoundingMode.UNNECESSARY);
     }
 
     private void validarMonto(BigDecimal monto) {

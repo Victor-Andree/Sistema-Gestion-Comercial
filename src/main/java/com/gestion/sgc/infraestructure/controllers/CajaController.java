@@ -1,6 +1,7 @@
 package com.gestion.sgc.infraestructure.controllers;
 
 import com.gestion.sgc.application.dto.request.AperturaCajaRequest;
+import com.gestion.sgc.application.dto.request.CierreCajaRequest;
 import com.gestion.sgc.application.dto.response.CajaResponse;
 import com.gestion.sgc.application.dto.response.SesionCajaResponse;
 import com.gestion.sgc.domain.ports.inputs.CajaIn;
@@ -43,5 +44,13 @@ public class CajaController {
     @GetMapping("/{id}/sesion-actual")
     public ResponseEntity<SesionCajaResponse> sesionActual(@PathVariable Long id) {
         return ResponseEntity.ok(cajaIn.obtenerSesionActual(id));
+    }
+
+    @PostMapping("/sesiones/{sesionId}/cierre")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<SesionCajaResponse> cerrar(@PathVariable Long sesionId,
+                                                      @Valid @RequestBody CierreCajaRequest request,
+                                                      Authentication authentication) {
+        return ResponseEntity.ok(cajaIn.cerrar(sesionId, request, authentication.getName()));
     }
 }

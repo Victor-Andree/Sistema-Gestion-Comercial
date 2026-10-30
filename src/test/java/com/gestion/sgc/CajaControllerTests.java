@@ -1,6 +1,7 @@
 package com.gestion.sgc;
 
 import com.gestion.sgc.domain.ports.inputs.CajaIn;
+import com.gestion.sgc.application.dto.request.CierreCajaRequest;
 import com.gestion.sgc.infraestructure.controllers.CajaController;
 import com.gestion.sgc.infraestructure.exception.InventoryExceptionHandler;
 import com.gestion.sgc.infraestructure.security.config.SecurityConfig;
@@ -77,5 +78,24 @@ class CajaControllerTests {
                         .contentType("application/json").content("{\"montoInicial\":10000000000000.00}"))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.errors.montoInicial").exists());
         verifyNoInteractions(cajas);
+    }
+
+    @Test void onlyAdminCanCloseAndAuthenticatedUsernameIsUsed() throws Exception {
+        String body = "{\"montoContado\":100.50,\"observacion\":\"Arqueo final\"}";
+        mvc.perform(post("/api/v1/cajas/sesiones/7/cierre").contentType("application/json").content(body))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/v1/cajas/sesiones/7/cierre").with(user("assistant").roles("ASISTENTE"))
+                        .contentType("application/json").content(body))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/cajas/sesiones/7/cierre").with(user("admin-real").roles("ADMIN"))
+                        .contentType("application/json").content(body))
+                .andExpect(status().isOk());
+        verify(cajas).cerrar(7L, new CierreCajaRequest(new BigDecimal("100.50"), "Arqueo final"), "admin-real");
+    }
+
+    @Test void invalidClosingAmountReturns400() throws Exception {
+        mvc.perform(post("/api/v1/cajas/sesiones/7/cierre").with(user("admin").roles("ADMIN"))
+                        .contentType("application/json").content("{\"montoContado\":-1}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.errors.montoContado").exists());
     }
 }

@@ -1,6 +1,7 @@
 package com.gestion.sgc;
 
 import com.gestion.sgc.application.useCase.CajaUseCase;
+import com.gestion.sgc.application.useCase.SaldoCajaCalculator;
 import com.gestion.sgc.domain.aggregates.constans.EstadoUsuario;
 import com.gestion.sgc.domain.aggregates.constans.RolEnum;
 import com.gestion.sgc.domain.ports.outputs.SesionCajaRepositoryPort;
@@ -23,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -55,6 +57,7 @@ class CajaPersistenceTests {
     @Autowired PersonaJpaRepository personas;
     @Autowired UsuarioJpaRepository usuarios;
     @MockitoSpyBean SesionCajaRepositoryPort sesionPort;
+    @MockitoBean SaldoCajaCalculator saldoCalculator;
 
     @AfterEach
     void cleanDatabase() {

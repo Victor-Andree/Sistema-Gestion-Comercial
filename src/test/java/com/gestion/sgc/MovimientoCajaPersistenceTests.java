@@ -2,6 +2,7 @@ package com.gestion.sgc;
 
 import com.gestion.sgc.application.dto.request.MovimientoCajaRequest;
 import com.gestion.sgc.application.useCase.MovimientoCajaUseCase;
+import com.gestion.sgc.application.useCase.SaldoCajaCalculator;
 import com.gestion.sgc.domain.aggregates.constans.EstadoSesionCaja;
 import com.gestion.sgc.domain.aggregates.constans.EstadoUsuario;
 import com.gestion.sgc.domain.aggregates.constans.RolEnum;
@@ -53,7 +54,7 @@ import static org.mockito.Mockito.doThrow;
         "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
         "logging.level.org.hibernate.SQL=WARN"
 })
-@Import({MovimientoCajaUseCase.class, MovimientoCajaRepositoryAdapter.class, SesionCajaRepositoryAdapter.class,
+@Import({MovimientoCajaUseCase.class, SaldoCajaCalculator.class, MovimientoCajaRepositoryAdapter.class, SesionCajaRepositoryAdapter.class,
         UsuarioRepositoryAdapter.class, MovimientoCajaMapperImpl.class, SesionCajaMapperImpl.class,
         CajaMapperImpl.class, UsuarioMapperImpl.class})
 class MovimientoCajaPersistenceTests {

@@ -23,7 +23,6 @@ import java.time.LocalDateTime;
 @Table(name = "sesiones_caja")
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class SesionCajaEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -47,4 +46,33 @@ public class SesionCajaEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "usuario_apertura_id", nullable = false)
     private UsuarioEntity usuarioApertura;
+
+    @Column(name = "saldo_esperado", precision = 15, scale = 2)
+    private BigDecimal saldoEsperado;
+
+    @Column(name = "monto_contado", precision = 15, scale = 2)
+    private BigDecimal montoContado;
+
+    @Column(name = "diferencia", precision = 15, scale = 2)
+    private BigDecimal diferencia;
+
+    @Column(name = "fecha_cierre")
+    private LocalDateTime fechaCierre;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_cierre_id")
+    private UsuarioEntity usuarioCierre;
+
+    @Column(name = "observacion_cierre", length = 500)
+    private String observacionCierre;
+
+    public SesionCajaEntity(Long sesionCajaId, CajaEntity caja, EstadoSesionCaja estado, BigDecimal montoInicial,
+                            LocalDateTime fechaApertura, UsuarioEntity usuarioApertura) {
+        this.sesionCajaId = sesionCajaId;
+        this.caja = caja;
+        this.estado = estado;
+        this.montoInicial = montoInicial;
+        this.fechaApertura = fechaApertura;
+        this.usuarioApertura = usuarioApertura;
+    }
 }

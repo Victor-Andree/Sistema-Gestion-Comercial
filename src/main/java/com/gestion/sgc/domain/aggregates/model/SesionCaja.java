@@ -12,7 +12,6 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
 public class SesionCaja {
     private Long sesionCajaId;
     private Caja caja;
@@ -20,4 +19,20 @@ public class SesionCaja {
     private BigDecimal montoInicial;
     private LocalDateTime fechaApertura;
     private Usuario usuarioApertura;
+    private BigDecimal saldoEsperado;
+    private BigDecimal montoContado;
+    private BigDecimal diferencia;
+    private LocalDateTime fechaCierre;
+    private Usuario usuarioCierre;
+    private String observacionCierre;
+
+    public SesionCaja(Long sesionCajaId, Caja caja, EstadoSesionCaja estado, BigDecimal montoInicial,
+                      LocalDateTime fechaApertura, Usuario usuarioApertura) {
+        this.sesionCajaId = sesionCajaId;
+        this.caja = caja;
+        this.estado = estado;
+        this.montoInicial = montoInicial;
+        this.fechaApertura = fechaApertura;
+        this.usuarioApertura = usuarioApertura;
+    }
 }
