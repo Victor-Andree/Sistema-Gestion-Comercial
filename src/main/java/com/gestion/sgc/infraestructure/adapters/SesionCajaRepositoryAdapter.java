@@ -27,6 +27,11 @@ public class SesionCajaRepositoryAdapter implements SesionCajaRepositoryPort {
     }
 
     @Override
+    public Optional<SesionCaja> findOpenByCajaIdForUpdate(Long cajaId) {
+        return repository.findOpenByCajaIdForUpdate(cajaId, EstadoSesionCaja.ABIERTA).map(mapper::toDomain);
+    }
+
+    @Override
     public Optional<SesionCaja> findById(Long sesionId) {
         return repository.findWithDetailsById(sesionId).map(mapper::toDomain);
     }

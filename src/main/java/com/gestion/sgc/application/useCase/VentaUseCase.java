@@ -25,12 +25,13 @@ import com.gestion.sgc.domain.ports.outputs.auth.UsuarioRepositoryPort;
 import com.gestion.sgc.infraestructure.mapper.ComprobanteMapper;
 import com.gestion.sgc.infraestructure.mapper.DetalleVentaMapper;
 import com.gestion.sgc.infraestructure.mapper.VentaMapper;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
@@ -60,7 +61,7 @@ public class VentaUseCase implements VentaIn {
     private final DevolucionCajaPendienteRepositoryPort devolucionCajaRepository;
 
     @Override
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public VentaResponse registrarVenta(VentaRequest request) {
 
         validarCobro(request.getMetodoPago(), request.getCajaId());
@@ -195,7 +196,7 @@ public class VentaUseCase implements VentaIn {
     }
 
     @Override
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public VentaResponse confirmarVenta(Long id, CobroVentaRequest cobro) {
 
         validarCobro(cobro.metodoPago(), cobro.cajaId());
@@ -303,7 +304,7 @@ public class VentaUseCase implements VentaIn {
     }
 
     @Override
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public VentaResponse anularVenta(Long id, String motivo) {
         Venta venta = ventaRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new RuntimeException("Venta no encontrada: " + id));
@@ -468,15 +469,9 @@ public class VentaUseCase implements VentaIn {
     private void registrarIngresoVentaSiCorresponde(Venta venta, Long cajaId, Usuario responsable) {
         if (venta.getMetodoPago() != MetodoPago.EFECTIVO) return;
 
-        SesionCaja encontrada = sesionCajaRepository.findOpenByCajaId(cajaId)
+        SesionCaja sesion = sesionCajaRepository.findOpenByCajaIdForUpdate(cajaId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
                         "La caja seleccionada no tiene una sesión abierta"));
-        SesionCaja sesion = sesionCajaRepository.findByIdForUpdate(encontrada.getSesionCajaId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
-                        "La sesión de caja ya no está disponible"));
-        if (sesion.getEstado() != EstadoSesionCaja.ABIERTA) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "La sesión de caja está cerrada");
-        }
 
         String key = "venta-" + venta.getVentaId() + "-cobro";
         if (movimientoCajaRepository.findByIdempotencyKey(key).isPresent()) return;
@@ -505,14 +500,12 @@ public class VentaUseCase implements VentaIn {
         SesionCaja sesion = sesionOriginal;
         if (sesionOriginal.getEstado() != EstadoSesionCaja.ABIERTA) {
             Optional<SesionCaja> actual = sesionCajaRepository
-                    .findOpenByCajaId(sesionOriginal.getCaja().getCajaId());
+                    .findOpenByCajaIdForUpdate(sesionOriginal.getCaja().getCajaId());
             if (actual.isEmpty()) {
                 registrarDevolucionPendiente(venta, cobro, sesionOriginal.getCaja().getCajaId());
                 return;
             }
-            sesion = sesionCajaRepository.findByIdForUpdate(actual.get().getSesionCajaId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
-                            "La sesión actual de caja ya no está disponible"));
+            sesion = actual.get();
         }
 
         BigDecimal ingresos = movimientoCajaRepository.sumBySesionIdAndTipo(

@@ -78,8 +78,7 @@ class VentaCajaUseCaseTests {
         Caja caja = new Caja(1L, "Principal", true);
         sesion = new SesionCaja(2L, caja, EstadoSesionCaja.ABIERTA, new BigDecimal("100.00"),
                 LocalDateTime.now(), admin);
-        when(sesiones.findOpenByCajaId(1L)).thenReturn(Optional.of(sesion));
-        when(sesiones.findByIdForUpdate(2L)).thenReturn(Optional.of(sesion));
+        when(sesiones.findOpenByCajaIdForUpdate(1L)).thenReturn(Optional.of(sesion));
         when(movimientos.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
         when(movimientos.save(any())).thenAnswer(invocation -> {
             MovimientoCaja movement = invocation.getArgument(0); movement.setMovimientoCajaId(50L); return movement;
@@ -111,7 +110,7 @@ class VentaCajaUseCaseTests {
     }
 
     @Test void cashSaleWithoutOpenSessionIsRejected() {
-        when(sesiones.findOpenByCajaId(1L)).thenReturn(Optional.empty());
+        when(sesiones.findOpenByCajaIdForUpdate(1L)).thenReturn(Optional.empty());
         ResponseStatusException error = assertThrows(ResponseStatusException.class,
                 () -> useCase.registrarVenta(request(MetodoPago.EFECTIVO, 1L)));
         assertEquals(409, error.getStatusCode().value());
@@ -154,6 +153,7 @@ class VentaCajaUseCaseTests {
         when(ventas.findDetallesByVentaId(10L)).thenReturn(List.of());
         when(movimientos.findByIdempotencyKey("venta-10-cobro")).thenReturn(Optional.of(income));
         when(movimientos.findByIdempotencyKey("venta-10-anulacion")).thenReturn(Optional.empty());
+        when(sesiones.findByIdForUpdate(2L)).thenReturn(Optional.of(sesion));
         when(movimientos.sumBySesionIdAndTipo(2L, TipoMovimientoCaja.INGRESO)).thenReturn(new BigDecimal("50.00"));
         when(movimientos.sumBySesionIdAndTipo(2L, TipoMovimientoCaja.EGRESO)).thenReturn(BigDecimal.ZERO);
 
@@ -178,8 +178,7 @@ class VentaCajaUseCaseTests {
         when(movimientos.findByIdempotencyKey("venta-10-cobro")).thenReturn(Optional.of(income));
         when(movimientos.findByIdempotencyKey("venta-10-anulacion")).thenReturn(Optional.empty());
         when(sesiones.findByIdForUpdate(2L)).thenReturn(Optional.of(closed));
-        when(sesiones.findOpenByCajaId(1L)).thenReturn(Optional.of(current));
-        when(sesiones.findByIdForUpdate(3L)).thenReturn(Optional.of(current));
+        when(sesiones.findOpenByCajaIdForUpdate(1L)).thenReturn(Optional.of(current));
         when(movimientos.sumBySesionIdAndTipo(3L, TipoMovimientoCaja.INGRESO)).thenReturn(BigDecimal.ZERO);
         when(movimientos.sumBySesionIdAndTipo(3L, TipoMovimientoCaja.EGRESO)).thenReturn(BigDecimal.ZERO);
 
@@ -202,7 +201,7 @@ class VentaCajaUseCaseTests {
         when(movimientos.findByIdempotencyKey("venta-10-cobro")).thenReturn(Optional.of(income));
         when(movimientos.findByIdempotencyKey("venta-10-anulacion")).thenReturn(Optional.empty());
         when(sesiones.findByIdForUpdate(2L)).thenReturn(Optional.of(closed));
-        when(sesiones.findOpenByCajaId(1L)).thenReturn(Optional.empty());
+        when(sesiones.findOpenByCajaIdForUpdate(1L)).thenReturn(Optional.empty());
         when(devoluciones.findByVentaId(10L)).thenReturn(Optional.empty());
 
         DevolucionCajaPendiente pending = new DevolucionCajaPendiente(1L, 10L, 1L, 50L,
@@ -233,8 +232,7 @@ class VentaCajaUseCaseTests {
         when(movimientos.findByIdempotencyKey("venta-10-cobro")).thenReturn(Optional.of(income));
         when(movimientos.findByIdempotencyKey("venta-10-anulacion")).thenReturn(Optional.empty());
         when(sesiones.findByIdForUpdate(2L)).thenReturn(Optional.of(closed));
-        when(sesiones.findOpenByCajaId(1L)).thenReturn(Optional.of(current));
-        when(sesiones.findByIdForUpdate(3L)).thenReturn(Optional.of(current));
+        when(sesiones.findOpenByCajaIdForUpdate(1L)).thenReturn(Optional.of(current));
         when(movimientos.sumBySesionIdAndTipo(3L, TipoMovimientoCaja.INGRESO)).thenReturn(BigDecimal.ZERO);
         when(movimientos.sumBySesionIdAndTipo(3L, TipoMovimientoCaja.EGRESO)).thenReturn(BigDecimal.ZERO);
         when(devoluciones.findByVentaId(10L)).thenReturn(Optional.empty());

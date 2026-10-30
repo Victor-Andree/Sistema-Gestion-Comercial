@@ -16,6 +16,12 @@ public interface SesionCajaJpaRepository extends JpaRepository<SesionCajaEntity,
     @EntityGraph(attributePaths = {"caja", "usuarioApertura"})
     Optional<SesionCajaEntity> findFirstByCajaCajaIdAndEstado(Long cajaId, EstadoSesionCaja estado);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @EntityGraph(attributePaths = {"caja", "usuarioApertura"})
+    @Query("select s from SesionCajaEntity s where s.caja.cajaId = :cajaId and s.estado = :estado")
+    Optional<SesionCajaEntity> findOpenByCajaIdForUpdate(@Param("cajaId") Long cajaId,
+                                                          @Param("estado") EstadoSesionCaja estado);
+
     @EntityGraph(attributePaths = {"caja", "usuarioApertura"})
     @Query("select s from SesionCajaEntity s where s.sesionCajaId = :id")
     Optional<SesionCajaEntity> findWithDetailsById(@Param("id") Long id);

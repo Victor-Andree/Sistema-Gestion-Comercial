@@ -16,6 +16,7 @@ import com.gestion.sgc.domain.ports.outputs.auth.UsuarioRepositoryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -36,7 +37,7 @@ public class MovimientoCajaUseCase implements MovimientoCajaIn {
     private final SaldoCajaCalculator saldoCalculator;
 
     @Override
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public MovimientoCajaResponse registrar(Long sesionId, MovimientoCajaRequest request, String username,
                                              String idempotencyKey) {
         validarMonto(request.monto());
