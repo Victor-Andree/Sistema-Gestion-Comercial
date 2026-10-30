@@ -60,7 +60,6 @@ public class JwtTokenValidatorFilter extends OncePerRequestFilter {
             return;
         }
         username = jwtService.extractUserName(jwt);
-        System.out.println("En jwt filter");
         if(Objects.nonNull(username) && SecurityContextHolder.getContext().getAuthentication()==null) {
 
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
