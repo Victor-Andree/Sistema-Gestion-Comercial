@@ -50,6 +50,7 @@ public class AdministrarUsuarioUseCase implements AdministrarUsuarioIn {
     @Override
     @Transactional
     public UsuarioResponse actualizar(Long id, ActualizarUsuarioRequest request, String actor) {
+        List<Usuario> administradoresActivos = usuarioRepository.lockActiveAdmins();
         Usuario usuario = obtenerUsuario(id);
         Persona persona = usuario.getPersona();
         validarIdentidadUnica(persona, request.getDni(), request.getCorreo());
@@ -59,6 +60,7 @@ public class AdministrarUsuarioUseCase implements AdministrarUsuarioIn {
 
         String rol = validarRol(request.getRol());
         String estado = validarEstado(request.getEstado());
+        validarUltimoAdministrador(usuario, rol, estado, administradoresActivos);
         if (usuario.getUsername().equals(actor)
                 && (!usuario.getRol().equals(rol) || !usuario.getEstadoUsuario().equals(estado))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -86,14 +88,29 @@ public class AdministrarUsuarioUseCase implements AdministrarUsuarioIn {
     @Override
     @Transactional
     public UsuarioResponse cambiarEstado(Long id, CambiarEstadoUsuarioRequest request, String actor) {
+        List<Usuario> administradoresActivos = usuarioRepository.lockActiveAdmins();
         Usuario usuario = obtenerUsuario(id);
         String estado = validarEstado(request.getEstado());
+        validarUltimoAdministrador(usuario, usuario.getRol(), estado, administradoresActivos);
         if (usuario.getUsername().equals(actor) && !EstadoUsuario.ACTIVO.name().equals(estado)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "No puedes desactivar tu propia cuenta");
         }
         usuario.setEstadoUsuario(estado);
         Usuario guardado = usuarioRepository.save(usuario);
         return usuarioMapper.toResponse(guardado, guardado.getPersona());
+    }
+
+    private void validarUltimoAdministrador(Usuario usuario, String nuevoRol, String nuevoEstado,
+                                             List<Usuario> administradoresActivos) {
+        boolean eraAdministradorActivo = RolEnum.ADMIN.name().equals(usuario.getRol())
+                && EstadoUsuario.ACTIVO.name().equals(usuario.getEstadoUsuario());
+        boolean seguiraSiendoAdministradorActivo = RolEnum.ADMIN.name().equals(nuevoRol)
+                && EstadoUsuario.ACTIVO.name().equals(nuevoEstado);
+        if (eraAdministradorActivo && !seguiraSiendoAdministradorActivo
+                && administradoresActivos.size() <= 1) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede desactivar ni degradar al último administrador activo");
+        }
     }
 
     private Usuario obtenerUsuario(Long id) {

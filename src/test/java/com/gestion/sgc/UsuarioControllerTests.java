@@ -15,11 +15,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -62,6 +64,24 @@ class UsuarioControllerTests {
                         .contentType("application/json").content("{\"estado\":\"INACTIVO\"}"))
                 .andExpect(status().isOk());
         verify(usuarios).cambiarEstado(7L, new CambiarEstadoUsuarioRequest("INACTIVO"), "admin-real");
+    }
+
+    @Test void jwtFromInactiveOrBlockedUserIsRejected() throws Exception {
+        when(jwtService.extractUserName("inactive-token")).thenReturn("inactive");
+        when(jwtService.extractUserName("blocked-token")).thenReturn("blocked");
+        var inactive = new User("inactive", "hash", false, true, true, true,
+                java.util.List.of(() -> "ROLE_ADMIN"));
+        var blocked = new User("blocked", "hash", true, true, true, false,
+                java.util.List.of(() -> "ROLE_ADMIN"));
+        when(userDetails.loadUserByUsername("inactive")).thenReturn(inactive);
+        when(userDetails.loadUserByUsername("blocked")).thenReturn(blocked);
+        when(jwtService.validateToken("inactive-token", inactive)).thenReturn(true);
+        when(jwtService.validateToken("blocked-token", blocked)).thenReturn(true);
+
+        mvc.perform(get("/api/v1/usuarios").header("Authorization", "Bearer inactive-token"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/usuarios").header("Authorization", "Bearer blocked-token"))
+                .andExpect(status().isUnauthorized());
     }
 
     private String validCreateBody() {

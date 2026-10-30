@@ -57,6 +57,7 @@ class UserDetailsServiceImplTests {
             @Override public boolean existsByUsername(String username) { return values.containsKey(username); }
             @Override public boolean existsByUsernameAndIdNot(String username, Long id) { return false; }
             @Override public List<Usuario> findAll() { return List.copyOf(values.values()); }
+            @Override public List<Usuario> lockActiveAdmins() { return List.of(); }
         });
     }
 }

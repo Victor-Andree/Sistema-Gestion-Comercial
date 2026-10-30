@@ -55,7 +55,8 @@ public class SecurityConfig {
         });
 
         httpSecurity.authorizeHttpRequests(auth -> {
-            auth.requestMatchers( "/api/v1/authentication/**").permitAll();
+            auth.requestMatchers("/api/v1/authentication/login").permitAll();
+            auth.requestMatchers("/api/v1/authentication/registro").hasRole("ADMIN");
             auth.requestMatchers("/error").permitAll()
                     .requestMatchers("/api/v1/ASISTENTE/**").hasRole("ASISTENTE")
                     .requestMatchers("/api/v1/ADMIN/**").hasRole("ADMIN")

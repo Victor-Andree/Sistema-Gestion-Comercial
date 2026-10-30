@@ -13,6 +13,7 @@ public interface UsuarioRepositoryPort {
     boolean existsByUsername(String username);
     boolean existsByUsernameAndIdNot(String username, Long id);
     List<Usuario> findAll();
+    List<Usuario> lockActiveAdmins();
 
 
 }
